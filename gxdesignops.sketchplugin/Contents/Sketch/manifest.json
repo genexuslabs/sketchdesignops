@@ -14,12 +14,12 @@
       "gxdesignops.send-to-queue-identifier"
     ]
   },
-  "version": "0.1.0",
-  "description": "",
+  "version": "1.0.0",
+  "description": "Sketch Plugin For GeneXus internal use",
   "name": "GxDesignOps",
   "identifier": "GxDesignOps",
   "disableCocoaScriptPreprocessor": true,
-  "appcast": "https://raw.githubusercontent.com//master/.appcast.xml",
+  "appcast": "https://raw.githubusercontent.com/genexuslabs/sketchdesignops/master/.appcast.xml",
   "author": "Gastón Milano",
   "authorEmail": "gmilano@genexus.com"
 }

@@ -6,20 +6,17 @@ var UI = require("sketch/ui");
 var exportLayer = function( layer , path)
 {
   const options = { output: path};
-  
   if (layer.exportFormats && layer.exportFormats.length > 0)
    {
       if (layer.name)
         console.log("Exporting " + layer.name);
       sketch.export(layer, options);
    }      
+   
   if (layer.layers)
   {
-    for (var child in layer.layers)
-    {
-      console.log(child);
-      exportLayer(child);
-    }
+    layer.layers.forEach( child => exportLayer(child, path));
+   
   }
 }
 

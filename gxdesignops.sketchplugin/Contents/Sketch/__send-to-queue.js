@@ -977,6 +977,7 @@ var exportLayer = function exportLayer(layer, path) {
   var options = {
     output: path
   };
+  console.log(JSON.stringify(layer));
 
   if (layer.exportFormats && layer.exportFormats.length > 0) {
     if (layer.name) console.log("Exporting " + layer.name);
@@ -984,10 +985,10 @@ var exportLayer = function exportLayer(layer, path) {
   }
 
   if (layer.layers) {
-    for (var child in layer.layers) {
-      console.log(child);
-      exportLayer(child);
-    }
+    console.log("hijos");
+    layer.layers.forEach(function (child) {
+      return exportLayer(child, path);
+    });
   }
 };
 
