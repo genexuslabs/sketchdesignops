@@ -2,7 +2,7 @@
   "name": "gxdesignops",
   "description": "Sketch Plugin For GeneXus internal use",
   "repository": "https://github.com/genexuslabs/sketchdesignops.git",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "engines": {
     "sketch": ">=49.0"
   },
