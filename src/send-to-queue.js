@@ -39,7 +39,7 @@ export default function() {
   const doc = sketch.getSelectedDocument()
   const queuePath = '/Volumes/cable/DesignOpsQueue/'
 
-  var imageFolder =  queuePath + decodeURIComponent(doc.path).replace(/^.*[\\\/]/, '').replace(".sketch", "");
+  var imageFolder =  queuePath + decodeURIComponent(doc.path).replace(/^.*[\\\/]/, '').replace(".sketch", "Images");
   console.log("Images to :" + imageFolder)
   doc.pages.forEach( page =>
     {

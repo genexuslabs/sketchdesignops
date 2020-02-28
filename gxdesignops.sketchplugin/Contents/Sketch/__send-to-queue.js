@@ -977,7 +977,6 @@ var exportLayer = function exportLayer(layer, path) {
   var options = {
     output: path
   };
-  console.log(JSON.stringify(layer));
 
   if (layer.exportFormats && layer.exportFormats.length > 0) {
     if (layer.name) console.log("Exporting " + layer.name);
@@ -985,7 +984,6 @@ var exportLayer = function exportLayer(layer, path) {
   }
 
   if (layer.layers) {
-    console.log("hijos");
     layer.layers.forEach(function (child) {
       return exportLayer(child, path);
     });
@@ -1009,7 +1007,7 @@ var exportLayer = function exportLayer(layer, path) {
   */
   var doc = sketch__WEBPACK_IMPORTED_MODULE_0___default.a.getSelectedDocument();
   var queuePath = '/Volumes/cable/DesignOpsQueue/';
-  var imageFolder = queuePath + decodeURIComponent(doc.path).replace(/^.*[\\\/]/, '').replace(".sketch", "");
+  var imageFolder = queuePath + decodeURIComponent(doc.path).replace(/^.*[\\\/]/, '').replace(".sketch", "Images");
   console.log("Images to :" + imageFolder);
   doc.pages.forEach(function (page) {
     page.layers.forEach(function (layer) {

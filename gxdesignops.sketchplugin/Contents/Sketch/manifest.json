@@ -14,7 +14,7 @@
       "gxdesignops.send-to-queue-identifier"
     ]
   },
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Sketch Plugin For GeneXus internal use",
   "name": "GxDesignOps",
   "identifier": "GxDesignOps",
