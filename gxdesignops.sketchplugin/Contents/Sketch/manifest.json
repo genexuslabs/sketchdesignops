@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/sketch-hq/SketchAPI/develop/docs/sketch-plugin-manifest-schema.json",
+  "icon": "icon.png",
+  "commands": [
+    {
+      "name": "Send to Queue",
+      "identifier": "gxdesignops.send-to-queue-identifier",
+      "script": "__send-to-queue.js"
+    }
+  ],
+  "menu": {
+    "title": "GxDesignOps",
+    "items": [
+      "gxdesignops.send-to-queue-identifier"
+    ]
+  },
+  "version": "0.1.0",
+  "description": "",
+  "name": "GxDesignOps",
+  "identifier": "GxDesignOps",
+  "disableCocoaScriptPreprocessor": true,
+  "appcast": "https://raw.githubusercontent.com//master/.appcast.xml",
+  "author": "Gastón Milano",
+  "authorEmail": "gmilano@genexus.com"
+}

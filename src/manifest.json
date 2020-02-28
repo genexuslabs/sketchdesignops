@@ -1,0 +1,17 @@
+{
+  "$schema": "https://raw.githubusercontent.com/sketch-hq/SketchAPI/develop/docs/sketch-plugin-manifest-schema.json",
+  "icon": "icon.png",
+  "commands": [
+    {
+      "name": "Send to Queue",
+      "identifier": "gxdesignops.send-to-queue-identifier",
+      "script": "./send-to-queue.js"
+    }
+  ],
+  "menu": {
+    "title": "GxDesignOps",
+    "items": [
+      "gxdesignops.send-to-queue-identifier"
+    ]
+  }
+}
