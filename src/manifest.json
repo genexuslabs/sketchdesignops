@@ -3,15 +3,27 @@
   "icon": "icon.png",
   "commands": [
     {
-      "name": "Send to Queue",
+      "name": "Send Sketch and Images to Queue",
       "identifier": "gxdesignops.send-to-queue-identifier",
       "script": "./send-to-queue.js"
+    },
+    {
+      "name": "Send only Sketch to Queue",
+      "identifier": "gxdesignops.file-send-to-queue-identifier",
+      "script": "./send-to-queue-file.js"
+    },
+    {
+      "name": "Check for Result Page",
+      "identifier": "gxdesignops.see-result",
+      "script": "./see-result.js"
     }
   ],
   "menu": {
     "title": "GxDesignOps",
     "items": [
-      "gxdesignops.send-to-queue-identifier"
+      "gxdesignops.send-to-queue-identifier",
+      "gxdesignops.file-send-to-queue-identifier",
+      "gxdesignops.see-result"
     ]
   }
 }

@@ -88,7 +88,7 @@ var exports =
 /******/
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = "./src/send-to-queue.js");
+/******/ 	return __webpack_require__(__webpack_require__.s = "./src/send-to-queue-file.js");
 /******/ })
 /************************************************************************/
 /******/ ({
@@ -955,10 +955,10 @@ module.exports = spawnSync
 
 /***/ }),
 
-/***/ "./src/send-to-queue.js":
-/*!******************************!*\
-  !*** ./src/send-to-queue.js ***!
-  \******************************/
+/***/ "./src/send-to-queue-file.js":
+/*!***********************************!*\
+  !*** ./src/send-to-queue-file.js ***!
+  \***********************************/
 /*! exports provided: default */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -972,32 +972,6 @@ __webpack_require__.r(__webpack_exports__);
 
 
 var UI = __webpack_require__(/*! sketch/ui */ "sketch/ui");
-
-var exportLayer = function exportLayer(layer, path) {
-  if (layer.exportFormats && layer.exportFormats.length > 0) {
-    var formats = new Array();
-    var scales = new Array();
-    var prefixes = new Array();
-    layer.exportFormats.forEach(function (ef) {
-      formats.push(ef.fileFormat);
-      scales.push(ef.size);
-    });
-    if (layer.name) console.log("Exporting " + layer.name);
-    var options = {
-      output: path,
-      formats: formats.join(","),
-      scales: scales.join(","),
-      prefixes: "md"
-    };
-    sketch__WEBPACK_IMPORTED_MODULE_0___default.a.export(layer, options);
-  }
-
-  if (layer.layers) {
-    layer.layers.forEach(function (child) {
-      return exportLayer(child, path);
-    });
-  }
-};
 
 /* harmony default export */ __webpack_exports__["default"] = (function () {
   var doc = sketch__WEBPACK_IMPORTED_MODULE_0___default.a.getSelectedDocument();
@@ -1025,13 +999,6 @@ var exportLayer = function exportLayer(layer, path) {
     }
   }
 
-  var imageFolder = queuePath + fileName.replace(".sketch", "Images");
-  console.log("Images to :" + imageFolder);
-  doc.pages.forEach(function (page) {
-    page.layers.forEach(function (layer) {
-      exportLayer(layer, imageFolder);
-    });
-  });
   console.log("Copying " + decodeURIComponent(path));
   console.log("To " + queuePath + fileName);
   var spawn = Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_1__["spawnSync"])('cp', ["'" + decodeURIComponent(path) + "'", "'" + queuePath + fileName + "'"], {
@@ -1119,4 +1086,4 @@ module.exports = require("stream");
 }
 globalThis['onRun'] = __skpm_run.bind(this, 'default')
 
-//# sourceMappingURL=__send-to-queue.js.map
+//# sourceMappingURL=__send-to-queue-file.js.map

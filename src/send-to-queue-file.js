@@ -3,35 +3,9 @@ import { spawnSync } from '@skpm/child_process';
 
 var UI = require("sketch/ui");
 
-var exportLayer = function (layer, path) {
 
-  if (layer.exportFormats && layer.exportFormats.length > 0) {
-    var formats = new Array();
-    var scales = new Array();
-    var prefixes = new Array();
-    layer.exportFormats.forEach(ef => {
-      formats.push(ef.fileFormat);
-      scales.push(ef.size);
-    });
-    if (layer.name)
-      console.log("Exporting " + layer.name);
 
-    const options = {
-      output: path,
-      formats: formats.join(","),
-      scales: scales.join(","),
-      prefixes: "md"
-    };
-    sketch.export(layer, options);
-  }
-
-  if (layer.layers) {
-    layer.layers.forEach(child => exportLayer(child, path));
-
-  }
-}
-
-export default function () {
+export default function() {
 
   const doc = sketch.getSelectedDocument()
   var queuePath = '/Volumes/cable/DesignOpsQueue/'
@@ -57,30 +31,23 @@ export default function () {
       fileName = withoutVersionPath;
     }
   }
-  var imageFolder = queuePath + fileName.replace(".sketch", "Images");
-  console.log("Images to :" + imageFolder)
-  doc.pages.forEach(page => {
-    page.layers.forEach(layer => {
-      exportLayer(layer, imageFolder);
-    })
-  });
+  
+  
   console.log("Copying " + decodeURIComponent(path));
   console.log("To " + queuePath + fileName);
-
 
   const spawn = spawnSync('cp', [
     "'" + decodeURIComponent(path) + "'",
     "'" + queuePath + fileName + "'"
   ], { shell: true });
 
-
-
-  if (spawn.status > 0) {
-    console.log(Error(spawn.stderr));
-    sketch.UI.message("😔 Some error occurs, see console for further details");
+ if (spawn.status > 0)
+ {
+   console.log(Error(spawn.stderr));
+   sketch.UI.message("😔 Some error occurs, see console for further details");
   }
-  else
-    sketch.UI.message("Copied to Design Ops Queue ! 💚")
-
+ else
+  sketch.UI.message("Copied to Design Ops Queue ! 💚")
+  
 
 }
