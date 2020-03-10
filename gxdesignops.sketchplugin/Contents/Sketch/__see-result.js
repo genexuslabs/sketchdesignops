@@ -977,7 +977,7 @@ var UI = __webpack_require__(/*! sketch/ui */ "sketch/ui");
 
 /* harmony default export */ __webpack_exports__["default"] = (function () {
   var doc = sketch__WEBPACK_IMPORTED_MODULE_0___default.a.getSelectedDocument();
-  var queuePath = Object(_utils__WEBPACK_IMPORTED_MODULE_2__["askQueuePath"])(queuePath);
+  var queuePath = Object(_utils__WEBPACK_IMPORTED_MODULE_2__["getQueuePath"])(queuePath);
   var fileName;
 
   var _getFileAndQueueName = Object(_utils__WEBPACK_IMPORTED_MODULE_2__["getFileAndQueueName"])(doc, queuePath);
@@ -1002,7 +1002,7 @@ var UI = __webpack_require__(/*! sketch/ui */ "sketch/ui");
 /*!**********************!*\
   !*** ./src/utils.js ***!
   \**********************/
-/*! exports provided: getFileAndQueueName, copyFile, copyImages, askQueuePath */
+/*! exports provided: getFileAndQueueName, copyFile, copyImages, getQueuePath, askQueuePath */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -1010,6 +1010,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getFileAndQueueName", function() { return getFileAndQueueName; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "copyFile", function() { return copyFile; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "copyImages", function() { return copyImages; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getQueuePath", function() { return getQueuePath; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "askQueuePath", function() { return askQueuePath; });
 /* harmony import */ var sketch__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! sketch */ "sketch");
 /* harmony import */ var sketch__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(sketch__WEBPACK_IMPORTED_MODULE_0__);
@@ -1093,7 +1094,12 @@ function copyImages(queuePath, fileName, doc) {
     });
   });
 }
-function askQueuePath(queuePath) {
+function getQueuePath() {
+  var queuePath = sketch__WEBPACK_IMPORTED_MODULE_0___default.a.Settings.settingForKey("DesignOpsQueue");
+  if (queuePath) return queuePath;
+  return askQueuePath();
+}
+function askQueuePath() {
   var queuePath = sketch__WEBPACK_IMPORTED_MODULE_0___default.a.Settings.settingForKey("DesignOpsQueue");
   console.log("The actual queuePath is :" + queuePath);
   if (!(queuePath !== undefined)) queuePath = '/Volumes/cable/DesignOpsQueue/';

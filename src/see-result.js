@@ -1,6 +1,6 @@
 import sketch from 'sketch';
 import { spawnSync } from '@skpm/child_process';
-import { getFileAndQueueName, askQueuePath } from './utils';
+import { getFileAndQueueName, getQueuePath } from './utils';
 
 var UI = require("sketch/ui");
 
@@ -8,7 +8,7 @@ var UI = require("sketch/ui");
 export default function () {
 
   const doc = sketch.getSelectedDocument()
-  var queuePath = askQueuePath(queuePath);
+  var queuePath = getQueuePath(queuePath);
   var fileName;
   ({ fileName, queuePath } = getFileAndQueueName(doc, queuePath));
 

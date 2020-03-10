@@ -77,7 +77,14 @@ export function copyImages(queuePath, fileName, doc) {
     });
 }
 
-export function askQueuePath(queuePath) {
+export function getQueuePath() {
+    var queuePath = sketch.Settings.settingForKey("DesignOpsQueue");
+    if (queuePath)
+        return queuePath;
+    return askQueuePath();
+}
+
+export function askQueuePath() {
     var queuePath = sketch.Settings.settingForKey("DesignOpsQueue");
     console.log("The actual queuePath is :" + queuePath);
     if (!(queuePath !== undefined))

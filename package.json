@@ -1,6 +1,6 @@
 {
   "name": "gxdesignops",
-  "description": "Sketch Plugin For GeneXus internal use",
+  "description": "Sketch Plugin For GeneXus Design Ops Cycles",
   "repository": "https://github.com/genexuslabs/sketchdesignops.git",
   "version": "1.3.0",
   "engines": {

@@ -16,6 +16,11 @@
       "name": "Check for Result Page",
       "identifier": "gxdesignops.see-result",
       "script": "./see-result.js"
+    },
+    {
+      "name": "Configure Queue Path",
+      "identifier": "gxdesignops.set-queue-path",
+      "script": "./set-queue-path.js"
     }
   ],
   "menu": {
@@ -23,7 +28,8 @@
     "items": [
       "gxdesignops.send-to-queue-identifier",
       "gxdesignops.file-send-to-queue-identifier",
-      "gxdesignops.see-result"
+      "gxdesignops.see-result", 
+      "gxdesignops.set-queue-path"
     ]
   }
 }

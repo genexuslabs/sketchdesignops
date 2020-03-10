@@ -1,11 +1,11 @@
 import sketch from 'sketch';
-import { copyFile, copyImages, getFileAndQueueName , askQueuePath} from './utils';
+import { copyFile, copyImages, getFileAndQueueName , getQueuePath} from './utils';
 import { spawnSync } from '@skpm/child_process';
 
 
 export default function() {
   const doc = sketch.getSelectedDocument()
-  var queuePath = askQueuePath(queuePath);
+  var queuePath = getQueuePath();
   if (queuePath)
     copySketch(queuePath, doc, true);
 }
