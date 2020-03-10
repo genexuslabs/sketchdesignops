@@ -966,22 +966,98 @@ module.exports = spawnSync
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var sketch__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! sketch */ "sketch");
 /* harmony import */ var sketch__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(sketch__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _send_to_queue__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./send-to-queue */ "./src/send-to-queue.js");
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./utils */ "./src/utils.js");
+
+
+
+/* harmony default export */ __webpack_exports__["default"] = (function () {
+  var doc = sketch__WEBPACK_IMPORTED_MODULE_0___default.a.getSelectedDocument();
+  var queuePath = Object(_utils__WEBPACK_IMPORTED_MODULE_2__["askQueuePath"])(queuePath);
+  if (queuePath) Object(_send_to_queue__WEBPACK_IMPORTED_MODULE_1__["copySketch"])(queuePath, doc, false);
+});
+
+/***/ }),
+
+/***/ "./src/send-to-queue.js":
+/*!******************************!*\
+  !*** ./src/send-to-queue.js ***!
+  \******************************/
+/*! exports provided: default, copySketch */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "copySketch", function() { return copySketch; });
+/* harmony import */ var sketch__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! sketch */ "sketch");
+/* harmony import */ var sketch__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(sketch__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./utils */ "./src/utils.js");
+/* harmony import */ var _skpm_child_process__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @skpm/child_process */ "./node_modules/@skpm/child_process/index.js");
+/* harmony import */ var _skpm_child_process__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_skpm_child_process__WEBPACK_IMPORTED_MODULE_2__);
+
+
+
+/* harmony default export */ __webpack_exports__["default"] = (function () {
+  var doc = sketch__WEBPACK_IMPORTED_MODULE_0___default.a.getSelectedDocument();
+  var queuePath = Object(_utils__WEBPACK_IMPORTED_MODULE_1__["askQueuePath"])(queuePath);
+  if (queuePath) copySketch(queuePath, doc, true);
+});
+function copySketch(queuePath, doc, images) {
+  var fileName;
+  var path = queuePath;
+
+  var _getFileAndQueueName = Object(_utils__WEBPACK_IMPORTED_MODULE_1__["getFileAndQueueName"])(doc, path);
+
+  fileName = _getFileAndQueueName.fileName;
+  queuePath = _getFileAndQueueName.queuePath;
+  console.log("copy to queue:" + queuePath);
+
+  if (queuePath.localeCompare(path) != 0) {
+    Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_2__["spawnSync"])('mkdir', ["-p", queuePath], {
+      shell: true
+    });
+  }
+
+  if (images) Object(_utils__WEBPACK_IMPORTED_MODULE_1__["copyImages"])(queuePath, fileName, doc);
+  var fromCopyFile = decodeURIComponent(doc.path);
+  var toCopyFile = queuePath + fileName;
+  var ret = Object(_utils__WEBPACK_IMPORTED_MODULE_1__["copyFile"])(fromCopyFile, toCopyFile);
+
+  if (!ret) {
+    sketch__WEBPACK_IMPORTED_MODULE_0___default.a.UI.message("😔 Some error occurs, see console for further details");
+  } else {
+    sketch__WEBPACK_IMPORTED_MODULE_0___default.a.UI.message("Copied to Design Ops Queue ! 💚");
+  }
+}
+
+/***/ }),
+
+/***/ "./src/utils.js":
+/*!**********************!*\
+  !*** ./src/utils.js ***!
+  \**********************/
+/*! exports provided: getFileAndQueueName, copyFile, copyImages, askQueuePath */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getFileAndQueueName", function() { return getFileAndQueueName; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "copyFile", function() { return copyFile; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "copyImages", function() { return copyImages; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "askQueuePath", function() { return askQueuePath; });
+/* harmony import */ var sketch__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! sketch */ "sketch");
+/* harmony import */ var sketch__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(sketch__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _skpm_child_process__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @skpm/child_process */ "./node_modules/@skpm/child_process/index.js");
 /* harmony import */ var _skpm_child_process__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_skpm_child_process__WEBPACK_IMPORTED_MODULE_1__);
 
 
-
-var UI = __webpack_require__(/*! sketch/ui */ "sketch/ui");
-
-/* harmony default export */ __webpack_exports__["default"] = (function () {
-  var doc = sketch__WEBPACK_IMPORTED_MODULE_0___default.a.getSelectedDocument();
-  var queuePath = '/Volumes/cable/DesignOpsQueue/';
+function getFileAndQueueName(doc, queuePath) {
   var branch = "";
   var build = "";
-  var path = doc.path;
   var fileName = decodeURIComponent(doc.path).replace(/^.*[\\\/]/, '').trim();
   var firstIndex = fileName.indexOf("(");
   var lastIndex = fileName.lastIndexOf(")");
+  var betweenText = fileName.substr(0, firstIndex);
 
   if (firstIndex > 0 && lastIndex > 0 && lastIndex > firstIndex) {
     var withoutVersionPath = fileName.substr(0, firstIndex).trim() + ".sketch";
@@ -992,24 +1068,82 @@ var UI = __webpack_require__(/*! sketch/ui */ "sketch/ui");
       branch = items[0].trim();
       build = items[1].trim();
       queuePath = queuePath + branch + "/" + build + "/";
-      var mkdir = Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_1__["spawnSync"])('mkdir', ["-p", queuePath], {
-        shell: true
-      });
       fileName = withoutVersionPath;
     }
   }
 
-  console.log("Copying " + decodeURIComponent(path));
-  console.log("To " + queuePath + fileName);
-  var spawn = Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_1__["spawnSync"])('cp', ["'" + decodeURIComponent(path) + "'", "'" + queuePath + fileName + "'"], {
+  return {
+    fileName: fileName,
+    queuePath: queuePath
+  };
+}
+function copyFile(fromCopyFile, toCopyFile) {
+  console.log("Copying " + fromCopyFile);
+  console.log("To " + toCopyFile);
+  var spawn = Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_1__["spawnSync"])('cp', ["'" + fromCopyFile + "'", "'" + toCopyFile + "'"], {
     shell: true
   });
 
   if (spawn.status > 0) {
     console.log(Error(spawn.stderr));
-    sketch__WEBPACK_IMPORTED_MODULE_0___default.a.UI.message("😔 Some error occurs, see console for further details");
-  } else sketch__WEBPACK_IMPORTED_MODULE_0___default.a.UI.message("Copied to Design Ops Queue ! 💚");
-});
+    return false;
+  } else {
+    return true;
+  }
+}
+
+var exportLayer = function exportLayer(layer, path) {
+  if (layer.exportFormats && layer.exportFormats.length > 0) {
+    var formats = new Array();
+    var scales = new Array();
+    var prefixes = new Array();
+    layer.exportFormats.forEach(function (ef) {
+      formats.push(ef.fileFormat);
+      scales.push(ef.size);
+    });
+    if (layer.name) console.log("Exporting " + layer.name);
+    var options = {
+      output: path,
+      formats: formats.join(","),
+      scales: scales.join(","),
+      prefixes: "md"
+    };
+    sketch__WEBPACK_IMPORTED_MODULE_0___default.a.export(layer, options);
+  }
+
+  if (layer.layers) {
+    layer.layers.forEach(function (child) {
+      return exportLayer(child, path);
+    });
+  }
+};
+
+function copyImages(queuePath, fileName, doc) {
+  var imageFolder = queuePath + fileName.replace(".sketch", "Images");
+  console.log("Images to :" + imageFolder);
+  doc.pages.forEach(function (page) {
+    page.layers.forEach(function (layer) {
+      exportLayer(layer, imageFolder);
+    });
+  });
+}
+function askQueuePath(queuePath) {
+  var queuePath = sketch__WEBPACK_IMPORTED_MODULE_0___default.a.Settings.settingForKey("DesignOpsQueue");
+  console.log("The actual queuePath is :" + queuePath);
+  if (!(queuePath !== undefined)) queuePath = '/Volumes/cable/DesignOpsQueue/';
+  sketch__WEBPACK_IMPORTED_MODULE_0___default.a.UI.getInputFromUser("Where is the Design Ops Queue", {
+    initialValue: queuePath
+  }, function (err, value) {
+    if (err) {
+      return null;
+    }
+
+    console.log(value);
+    queuePath = value;
+    sketch__WEBPACK_IMPORTED_MODULE_0___default.a.Settings.setSettingForKey("DesignOpsQueue", queuePath);
+  });
+  return queuePath;
+}
 
 /***/ }),
 
@@ -1043,17 +1177,6 @@ module.exports = require("events");
 /***/ (function(module, exports) {
 
 module.exports = require("sketch");
-
-/***/ }),
-
-/***/ "sketch/ui":
-/*!****************************!*\
-  !*** external "sketch/ui" ***!
-  \****************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = require("sketch/ui");
 
 /***/ }),
 
