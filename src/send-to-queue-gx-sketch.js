@@ -7,27 +7,31 @@ export default function() {
   const doc = sketch.getSelectedDocument()
   var queuePath = getQueuePath();
   if (queuePath)
-    copySketch(queuePath, doc, true);
+    copyGxSketch(queuePath, doc, true);
 }
 
-
-export function copySketch(queuePath, doc, images) {
+export function copyGxSketch(queuePath, doc, images) {
   var fileName;
   var path = queuePath;
   ({ fileName, queuePath } = getFileAndQueueName(doc, path));
   console.log("copy to queue:" + queuePath);
   if (queuePath.localeCompare(path) != 0) {
-    spawnSync('mkdir', ["-p", queuePath], { shell: true });
+    spawnSync('mkdir', ["-p", queuePath + "/gx/"], { shell: true });
   }
   if (images)
-    copyImages(queuePath, fileName, doc);
+    copyImages(queuePath + "/gx/", fileName, doc);
+
   var fromCopyFile = decodeURIComponent(doc.path);
-  var toCopyFile = queuePath + fileName;
+  var toCopyFile = queuePath + "/gx/" + fileName;
   const ret = copyFile(fromCopyFile, toCopyFile);
+
   if (!ret) {
     sketch.UI.message("😔 Some error occurs, see console for further details");
   }
   else {
+    execSync("pushd " + queuePath + " && zip -r " + queuePath + "/" + fileName.replace(".sketch", ".gxsketch") + " " + "gx " + "&& popd " + queuePath , { shell: true });
+    spawnSync('rm', ["-rf",  queuePath + "/gx/"], { shell: true });  
     sketch.UI.message("Copied to Design Ops Queue ! 💚");
   }
 }
+

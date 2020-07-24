@@ -976,13 +976,14 @@ __webpack_require__.r(__webpack_exports__);
 /*!**********************!*\
   !*** ./src/utils.js ***!
   \**********************/
-/*! exports provided: getFileAndQueueName, copyFile, copyImages, getQueuePath, askQueuePath */
+/*! exports provided: getFileAndQueueName, copyFile, generateArtboardImages, copyImages, getQueuePath, askQueuePath */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getFileAndQueueName", function() { return getFileAndQueueName; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "copyFile", function() { return copyFile; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "generateArtboardImages", function() { return generateArtboardImages; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "copyImages", function() { return copyImages; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getQueuePath", function() { return getQueuePath; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "askQueuePath", function() { return askQueuePath; });
@@ -1032,6 +1033,24 @@ function copyFile(fromCopyFile, toCopyFile) {
     return true;
   }
 }
+function generateArtboardImages(document, path) {
+  var artboards = [];
+  document.pages.forEach(function (page) {
+    page.layers.forEach(function (layer) {
+      // Get only artboards and skip if artboard name starts with underscore
+      if (layer.type == 'Artboard' && !layer.name.startsWith('_')) {
+        artboards.push(layer);
+      }
+    });
+    var exportPath = path + page.name + '/';
+    artboards.forEach(function (ab) {
+      // Export PNG
+      sketch__WEBPACK_IMPORTED_MODULE_0___default.a.export(ab, {
+        output: exportPath
+      });
+    });
+  });
+}
 
 var exportLayer = function exportLayer(layer, path) {
   if (layer.exportFormats && layer.exportFormats.length > 0) {
@@ -1061,6 +1080,7 @@ var exportLayer = function exportLayer(layer, path) {
 
 function copyImages(queuePath, fileName, doc) {
   var imageFolder = queuePath + fileName.replace(".sketch", "Images");
+  generateArtboardImages(doc, imageFolder);
   console.log("Images to :" + imageFolder);
   doc.pages.forEach(function (page) {
     page.layers.forEach(function (layer) {

@@ -1,11 +1,18 @@
 import sketch from 'sketch';
 import { spawnSync } from '@skpm/child_process';
 import { getFileAndQueueName, getQueuePath } from './utils';
+import { os } from '@skpm/os';
 
 var UI = require("sketch/ui");
+var zip = require("jszip");
+
 
 
 export default function () {
+  
+ 
+  
+  sketch.UI.message("Opening the result ! 💚")
 
   const doc = sketch.getSelectedDocument()
   var queuePath = getQueuePath(queuePath);
@@ -24,7 +31,8 @@ export default function () {
     sketch.UI.message("😔 Some error occurs, see console for further details");
   }
   else
-    sketch.UI.message("Opening the result ! 💚")
-
+    sketch.UI.message("Opening the result ! 💚");
 }
+
+
 

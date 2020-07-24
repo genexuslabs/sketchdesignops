@@ -8,6 +8,11 @@
       "script": "__send-to-queue.js"
     },
     {
+      "name": "Send GX Sketch Format to Queue",
+      "identifier": "gxdesignops.send-to-queue-identifier-gx",
+      "script": "__send-to-queue-gx-sketch.js"
+    },
+    {
       "name": "Send only Sketch to Queue",
       "identifier": "gxdesignops.file-send-to-queue-identifier",
       "script": "__send-to-queue-file.js"
@@ -27,12 +32,13 @@
     "title": "GxDesignOps",
     "items": [
       "gxdesignops.send-to-queue-identifier",
+      "gxdesignops.send-to-queue-identifier-gx",
       "gxdesignops.file-send-to-queue-identifier",
       "gxdesignops.see-result",
       "gxdesignops.set-queue-path"
     ]
   },
-  "version": "1.3.0",
+  "version": "1.5.0",
   "description": "Sketch Plugin For GeneXus Design Ops Cycles",
   "name": "GxDesignOps",
   "identifier": "GxDesignOps",

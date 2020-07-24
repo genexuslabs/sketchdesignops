@@ -88,7 +88,7 @@ var exports =
 /******/
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = "./src/send-to-queue.js");
+/******/ 	return __webpack_require__(__webpack_require__.s = "./src/send-to-queue-gx-sketch.js");
 /******/ })
 /************************************************************************/
 /******/ ({
@@ -955,16 +955,16 @@ module.exports = spawnSync
 
 /***/ }),
 
-/***/ "./src/send-to-queue.js":
-/*!******************************!*\
-  !*** ./src/send-to-queue.js ***!
-  \******************************/
-/*! exports provided: default, copySketch */
+/***/ "./src/send-to-queue-gx-sketch.js":
+/*!****************************************!*\
+  !*** ./src/send-to-queue-gx-sketch.js ***!
+  \****************************************/
+/*! exports provided: default, copyGxSketch */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "copySketch", function() { return copySketch; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "copyGxSketch", function() { return copyGxSketch; });
 /* harmony import */ var sketch__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! sketch */ "sketch");
 /* harmony import */ var sketch__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(sketch__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./utils */ "./src/utils.js");
@@ -976,9 +976,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony default export */ __webpack_exports__["default"] = (function () {
   var doc = sketch__WEBPACK_IMPORTED_MODULE_0___default.a.getSelectedDocument();
   var queuePath = Object(_utils__WEBPACK_IMPORTED_MODULE_1__["getQueuePath"])();
-  if (queuePath) copySketch(queuePath, doc, true);
+  if (queuePath) copyGxSketch(queuePath, doc, true);
 });
-function copySketch(queuePath, doc, images) {
+function copyGxSketch(queuePath, doc, images) {
   var fileName;
   var path = queuePath;
 
@@ -989,19 +989,25 @@ function copySketch(queuePath, doc, images) {
   console.log("copy to queue:" + queuePath);
 
   if (queuePath.localeCompare(path) != 0) {
-    Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_2__["spawnSync"])('mkdir', ["-p", queuePath], {
+    Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_2__["spawnSync"])('mkdir', ["-p", queuePath + "/gx/"], {
       shell: true
     });
   }
 
-  if (images) Object(_utils__WEBPACK_IMPORTED_MODULE_1__["copyImages"])(queuePath, fileName, doc);
+  if (images) Object(_utils__WEBPACK_IMPORTED_MODULE_1__["copyImages"])(queuePath + "/gx/", fileName, doc);
   var fromCopyFile = decodeURIComponent(doc.path);
-  var toCopyFile = queuePath + fileName;
+  var toCopyFile = queuePath + "/gx/" + fileName;
   var ret = Object(_utils__WEBPACK_IMPORTED_MODULE_1__["copyFile"])(fromCopyFile, toCopyFile);
 
   if (!ret) {
     sketch__WEBPACK_IMPORTED_MODULE_0___default.a.UI.message("😔 Some error occurs, see console for further details");
   } else {
+    Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_2__["execSync"])("pushd " + queuePath + " && zip -r " + queuePath + "/" + fileName.replace(".sketch", ".gxsketch") + " " + "gx " + "&& popd " + queuePath, {
+      shell: true
+    });
+    Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_2__["spawnSync"])('rm', ["-rf", queuePath + "/gx/"], {
+      shell: true
+    });
     sketch__WEBPACK_IMPORTED_MODULE_0___default.a.UI.message("Copied to Design Ops Queue ! 💚");
   }
 }
@@ -1211,4 +1217,4 @@ module.exports = require("stream");
 }
 globalThis['onRun'] = __skpm_run.bind(this, 'default')
 
-//# sourceMappingURL=__send-to-queue.js.map
+//# sourceMappingURL=__send-to-queue-gx-sketch.js.map

@@ -29,7 +29,8 @@ export function copyFile(fromCopyFile, toCopyFile) {
     const spawn = spawnSync('cp', [
         "'" + fromCopyFile + "'",
         "'" + toCopyFile + "'"
-    ], { shell: true });
+    ], 
+    { shell: true });
     if (spawn.status > 0) {
         console.log(Error(spawn.stderr));
         return false;
@@ -37,6 +38,23 @@ export function copyFile(fromCopyFile, toCopyFile) {
     else {
         return true;
     }
+}
+export function generateArtboardImages(document, path) {
+  var artboards = [];
+  
+  document.pages.forEach(page => {
+    page.layers.forEach(layer => {
+      // Get only artboards and skip if artboard name starts with underscore
+      if ( layer.type == 'Artboard' && !layer.name.startsWith('_') ) {
+        artboards.push(layer)
+      }
+    });
+    var exportPath = path + page.name + '/';
+   artboards.forEach(ab => {
+      // Export PNG
+      sketch.export(ab, {output: exportPath})
+   });
+  });
 }
 
 var exportLayer = function (layer, path) {
@@ -69,6 +87,7 @@ var exportLayer = function (layer, path) {
 
 export function copyImages(queuePath, fileName, doc) {
     var imageFolder = queuePath + fileName.replace(".sketch", "Images");
+    generateArtboardImages(doc, imageFolder);
     console.log("Images to :" + imageFolder);
     doc.pages.forEach(page => {
         page.layers.forEach(layer => {

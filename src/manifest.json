@@ -8,6 +8,11 @@
       "script": "./send-to-queue.js"
     },
     {
+      "name": "Send GX Sketch Format to Queue",
+      "identifier": "gxdesignops.send-to-queue-identifier-gx",
+      "script": "./send-to-queue-gx-sketch.js"
+    },
+    {
       "name": "Send only Sketch to Queue",
       "identifier": "gxdesignops.file-send-to-queue-identifier",
       "script": "./send-to-queue-file.js"
@@ -27,6 +32,7 @@
     "title": "GxDesignOps",
     "items": [
       "gxdesignops.send-to-queue-identifier",
+      "gxdesignops.send-to-queue-identifier-gx",
       "gxdesignops.file-send-to-queue-identifier",
       "gxdesignops.see-result", 
       "gxdesignops.set-queue-path"
