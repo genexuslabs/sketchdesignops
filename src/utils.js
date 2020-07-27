@@ -1,6 +1,6 @@
 import sketch from 'sketch';
 
-import { spawnSync } from '@skpm/child_process';
+import { spawnSync, execSync } from '@skpm/child_process';
 
 export function getFileAndQueueName(doc, queuePath) {
     var branch = "";
@@ -21,6 +21,33 @@ export function getFileAndQueueName(doc, queuePath) {
         }
     }
     return { fileName, queuePath };
+}
+
+export function uploadToS3(fileName, file, bucketName, s3Secret, s3Key) {
+ 
+  fileName = fileName.replace(/[^a-z0-9.]/gi, '_');
+  var dateValue = execSync("date -R").toString().replace(/\r?\n|\r/, "");
+  console.log("Date:" + dateValue);
+  var bucket = bucketName;
+  var resource = `/${bucket}/${fileName}`;
+  var contentType = "application/x-compressed-tar";
+  var signature;
+  var stringToSign = `"PUT\n\napplication/x-compressed-tar\n${dateValue}\n${resource}"`;
+  console.log(stringToSign);
+
+  var signMethod = `echo -en ${stringToSign} | openssl sha1 -hmac ${s3Secret} -binary | base64`;
+  console.log(signMethod);
+  var signatureObj = execSync(signMethod);
+  if (signatureObj)
+  {
+    signature = signatureObj.toString().replace(/\r?\n|\r/, "");
+    console.log("Signature: " + signature.toString());
+  }  
+  const curl_command =  `curl -X PUT -T "${file}" -H "Host: ${bucket}.s3.amazonaws.com" -H "Date: ${dateValue}" -H "Content-Type: ${contentType}" -H "Authorization: AWS ${s3Key}:${signature}" https://${bucket}.s3.amazonaws.com/${fileName}`;
+  console.log(curl_command);
+  var test = execSync(curl_command);
+  if (test)
+    console.log(test.toString()); 
 }
 
 export function copyFile(fromCopyFile, toCopyFile) {
@@ -116,5 +143,5 @@ export function askQueuePath() {
       queuePath = value;
       sketch.Settings.setSettingForKey("DesignOpsQueue", queuePath);
     });
-    return queuePath;
+    return queuePath; 
   }

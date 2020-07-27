@@ -93,865 +93,23 @@ var exports =
 /************************************************************************/
 /******/ ({
 
-/***/ "./node_modules/@skpm/child_process/index.js":
-/*!***************************************************!*\
-  !*** ./node_modules/@skpm/child_process/index.js ***!
-  \***************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-module.exports.exec = __webpack_require__(/*! ./lib/exec */ "./node_modules/@skpm/child_process/lib/exec.js")
-module.exports.execFile = __webpack_require__(/*! ./lib/execFile */ "./node_modules/@skpm/child_process/lib/execFile.js")
-module.exports.spawn = __webpack_require__(/*! ./lib/spawn */ "./node_modules/@skpm/child_process/lib/spawn.js")
-module.exports.spawnSync = __webpack_require__(/*! ./lib/spawnSync */ "./node_modules/@skpm/child_process/lib/spawnSync.js")
-module.exports.execFileSync = __webpack_require__(/*! ./lib/execFileSync */ "./node_modules/@skpm/child_process/lib/execFileSync.js")
-module.exports.execSync = __webpack_require__(/*! ./lib/execSync */ "./node_modules/@skpm/child_process/lib/execSync.js")
-
-
-/***/ }),
-
-/***/ "./node_modules/@skpm/child_process/lib/exec.js":
-/*!******************************************************!*\
-  !*** ./node_modules/@skpm/child_process/lib/exec.js ***!
-  \******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-var execFile = __webpack_require__(/*! ./execFile */ "./node_modules/@skpm/child_process/lib/execFile.js")
-
-function normalizeExecArgs(command, options, callback) {
-  if (typeof options === 'function') {
-    callback = options
-    options = undefined
-  }
-
-  // Make a shallow copy so we don't clobber the user's options object.
-  options = Object.assign({}, options)
-  options.shell = typeof options.shell === 'string' ? options.shell : true
-
-  return {
-    file: command,
-    options: options,
-    callback: callback
-  }
-}
-
-module.exports = function exec(command, options, callback) {
-  var opts = normalizeExecArgs(command, options, callback)
-  return execFile(opts.file, opts.options, opts.callback)
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/@skpm/child_process/lib/execFile.js":
-/*!**********************************************************!*\
-  !*** ./node_modules/@skpm/child_process/lib/execFile.js ***!
-  \**********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-/* globals NSMutableData, NSData */
-var spawn = __webpack_require__(/*! ./spawn */ "./node_modules/@skpm/child_process/lib/spawn.js")
-var handleData = __webpack_require__(/*! ./handleData */ "./node_modules/@skpm/child_process/lib/handleData.js")
-
-function validateTimeout(timeout) {
-  if (timeout != null && !(Number.isInteger(timeout) && timeout >= 0)) {
-    throw new Error('ERR_OUT_OF_RANGE options.timeout')
-  }
-}
-
-function validateMaxBuffer(maxBuffer) {
-  if (maxBuffer != null && !(typeof maxBuffer === 'number' && maxBuffer >= 0)) {
-    throw new Error('ERR_OUT_OF_RANGE options.maxBuffer')
-  }
-}
-
-function concatData(prev, data) {
-  prev.appendData(data)
-  return prev
-}
-
-module.exports = function execFile(file, args, options, callback) {
-  var defaultOptions = {
-    encoding: 'utf8',
-    timeout: 0,
-    maxBuffer: 200 * 1024,
-    killSignal: 'SIGTERM',
-    cwd: undefined,
-    env: undefined,
-    shell: false
-  }
-
-  if (typeof args === 'function') {
-    // function (file, callback)
-    callback = args
-    args = []
-    options = defaultOptions
-  } else if (typeof args === 'object' && !Array.isArray(args)) {
-    // function (file, options, callback)
-    callback = options
-    options = Object.assign(defaultOptions, args)
-    args = []
-  } else {
-    // function (file, args, options, callback)
-    options = Object.assign(defaultOptions, options)
-  }
-
-  // Validate the timeout, if present.
-  validateTimeout(options.timeout)
-
-  // Validate maxBuffer, if present.
-  validateMaxBuffer(options.maxBuffer)
-
-  var child = spawn(file, args, {
-    cwd: options.cwd,
-    env: options.env,
-    gid: options.gid,
-    uid: options.uid,
-    shell: options.shell
-  })
-
-  var encoding = options.encoding
-  var _stdout = []
-  var _stderr = []
-
-  var stdoutLen = 0
-  var stderrLen = 0
-  var killed = false
-  var exited = false
-  var timeoutId
-
-  var ex = null
-
-  var cmd = file
-
-  function exithandler(code, signal) {
-    if (exited) return
-    exited = true
-
-    if (timeoutId) {
-      clearTimeout(timeoutId)
-      timeoutId = null
-    }
-
-    if (!callback) return
-
-    // merge chunks
-    var stdout = handleData(
-      NSData.dataWithData(_stdout.reduce(concatData, NSMutableData.data())),
-      encoding
-    )
-    var stderr = handleData(
-      NSData.dataWithData(_stderr.reduce(concatData, NSMutableData.data())),
-      encoding
-    )
-
-    if (!ex && code === 0 && signal === null) {
-      callback(null, stdout, stderr)
-      return
-    }
-
-    if (args.length !== 0) {
-      cmd += ' ' + args.join(' ')
-    }
-
-    if (!ex) {
-      ex = new Error('Command failed: ' + cmd + '\n' + stderr)
-      ex.killed = child.killed || killed
-      ex.code = code
-      ex.signal = signal
-    }
-
-    ex.cmd = cmd
-    callback(ex, stdout, stderr)
-  }
-
-  function errorhandler(e) {
-    ex = e
-
-    exithandler()
-  }
-
-  function kill() {
-    killed = true
-    try {
-      child.kill(options.killSignal)
-    } catch (e) {
-      ex = e
-      exithandler()
-    }
-  }
-
-  if (options.timeout > 0) {
-    timeoutId = setTimeout(function delayedKill() {
-      kill()
-      timeoutId = null
-    }, options.timeout)
-  }
-
-  if (child.stdout) {
-    child.stdout.setEncoding('NSData')
-    child.stdout.on('data', function onChildStdout(chunk) {
-      stdoutLen += chunk.length()
-      if (stdoutLen > options.maxBuffer) {
-        ex = new Error('ERR_CHILD_PROCESS_STDIO_MAXBUFFER stdout')
-        kill()
-      } else {
-        _stdout.push(chunk)
-      }
-    })
-  }
-
-  if (child.stderr) {
-    child.stderr.setEncoding('NSData')
-    child.stderr.on('data', function onChildStderr(chunk) {
-      stderrLen += chunk.length()
-
-      if (stderrLen > options.maxBuffer) {
-        ex = new Error('ERR_CHILD_PROCESS_STDIO_MAXBUFFER stderr')
-        kill()
-      } else {
-        _stderr.push(chunk)
-      }
-    })
-  }
-
-  child.addListener('close', exithandler)
-  child.addListener('error', errorhandler)
-
-  return child
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/@skpm/child_process/lib/execFileSync.js":
-/*!**************************************************************!*\
-  !*** ./node_modules/@skpm/child_process/lib/execFileSync.js ***!
-  \**************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-var spawnSync = __webpack_require__(/*! ./spawnSync */ "./node_modules/@skpm/child_process/lib/spawnSync.js")
-
-function validateTimeout(timeout) {
-  if (timeout != null && !(Number.isInteger(timeout) && timeout >= 0)) {
-    throw new Error('ERR_OUT_OF_RANGE options.timeout')
-  }
-}
-
-function validateMaxBuffer(maxBuffer) {
-  if (maxBuffer != null && !(typeof maxBuffer === 'number' && maxBuffer >= 0)) {
-    throw new Error('ERR_OUT_OF_RANGE options.maxBuffer')
-  }
-}
-
-module.exports = function execFileSync(file, args, options) {
-  var defaultOptions = {
-    encoding: 'buffer',
-    timeout: 0,
-    maxBuffer: 200 * 1024,
-    killSignal: 'SIGTERM',
-    cwd: null,
-    env: null,
-    shell: false
-  }
-
-  if (typeof args === 'object' && !Array.isArray(args)) {
-    // function (file, options)
-    options = Object.assign(defaultOptions, args)
-    args = []
-  } else {
-    // function (file)
-    options = Object.assign(defaultOptions, options || {})
-  }
-
-  // Validate the timeout, if present.
-  validateTimeout(options.timeout)
-
-  // Validate maxBuffer, if present.
-  validateMaxBuffer(options.maxBuffer)
-
-  var child = spawnSync(file, args, {
-    cwd: options.cwd,
-    env: options.env,
-    gid: options.gid,
-    uid: options.uid,
-    shell: options.shell,
-    encoding: options.encoding,
-    stdio: ['pipe', 'pipe', 'inherit']
-  })
-
-  if (child.status !== 0) {
-    var error = new Error('Failed to run: ' + String(child.stderr))
-    error.pid = child.pid
-    error.status = child.status
-    error.stdout = child.stdout
-    error.stderr = child.stderr
-    throw error
-  }
-
-  return child.stdout
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/@skpm/child_process/lib/execSync.js":
-/*!**********************************************************!*\
-  !*** ./node_modules/@skpm/child_process/lib/execSync.js ***!
-  \**********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-var execFileSync = __webpack_require__(/*! ./execFileSync */ "./node_modules/@skpm/child_process/lib/execFileSync.js")
-
-function normalizeExecArgs(command, options) {
-  // Make a shallow copy so we don't clobber the user's options object.
-  options = Object.assign({}, options)
-  options.shell = typeof options.shell === 'string' ? options.shell : true
-
-  return {
-    file: command,
-    options: options
-  }
-}
-
-module.exports = function execSync(command, options) {
-  var opts = normalizeExecArgs(command, options)
-  return execFileSync(opts.file, opts.options)
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/@skpm/child_process/lib/handleData.js":
-/*!************************************************************!*\
-  !*** ./node_modules/@skpm/child_process/lib/handleData.js ***!
-  \************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-var Buffer = __webpack_require__(/*! buffer */ "buffer").Buffer
-
-function handleBuffer(buffer, encoding) {
-  if (encoding === 'buffer') {
-    return buffer
-  }
-  if (encoding === 'NSData') {
-    return buffer.toNSData()
-  }
-  return buffer.toString(encoding)
-}
-
-module.exports = function handleData(data, encoding) {
-  var buffer = Buffer.from(data)
-
-  return handleBuffer(buffer, encoding)
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/@skpm/child_process/lib/normalizeSpawnArguments.js":
-/*!*************************************************************************!*\
-  !*** ./node_modules/@skpm/child_process/lib/normalizeSpawnArguments.js ***!
-  \*************************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = function normalizeSpawnArguments(file, args, options) {
-  if (typeof file !== 'string' || file.length === 0) {
-    throw new Error('ERR_INVALID_ARG_TYPE')
-  }
-
-  if (Array.isArray(args)) {
-    args = args.slice(0)
-  } else if (
-    args !== undefined &&
-    (args === null || typeof args !== 'object')
-  ) {
-    throw new Error('ERR_INVALID_ARG_TYPE args')
-  } else {
-    options = args
-    args = []
-  }
-
-  if (options === undefined) {
-    options = {}
-  } else if (options === null || typeof options !== 'object') {
-    throw new Error('ERR_INVALID_ARG_TYPE options')
-  }
-
-  // Validate the cwd, if present.
-  if (options.cwd != null && typeof options.cwd !== 'string') {
-    throw new Error('ERR_INVALID_ARG_TYPE options.cwd')
-  }
-
-  // Validate detached, if present.
-  if (options.detached != null && typeof options.detached !== 'boolean') {
-    throw new Error('ERR_INVALID_ARG_TYPE options.detached')
-  }
-
-  // Validate the uid, if present.
-  if (options.uid != null && !Number.isInteger(options.uid)) {
-    throw new Error('ERR_INVALID_ARG_TYPE options.uid')
-  }
-
-  // Validate the gid, if present.
-  if (options.gid != null && !Number.isInteger(options.gid)) {
-    throw new Error('ERR_INVALID_ARG_TYPE options.gid')
-  }
-
-  // Validate the shell, if present.
-  if (
-    options.shell != null &&
-    typeof options.shell !== 'boolean' &&
-    typeof options.shell !== 'string'
-  ) {
-    throw new Error('ERR_INVALID_ARG_TYPE options.shell')
-  }
-
-  // Validate argv0, if present.
-  if (options.argv0 != null && typeof options.argv0 !== 'string') {
-    throw new Error('ERR_INVALID_ARG_TYPE options.argv0')
-  }
-
-  // Make a shallow copy so we don't clobber the user's options object.
-  options = Object.assign({}, options)
-
-  if (options.shell) {
-    var command = [file].concat(args).join(' ')
-
-    if (typeof options.shell === 'string') {
-      file = options.shell
-    } else {
-      file = '/bin/bash'
-    }
-    args = ['-l', '-c', command]
-  }
-
-  if (typeof options.argv0 === 'string') {
-    args.unshift(options.argv0)
-  }
-
-  var stdio = ['pipe', 'pipe', 'pipe']
-
-  if (typeof options.stdio === 'string') {
-    if (options.stdio === 'inherit') {
-      stdio = [0, 1, 2]
-    } else {
-      stdio = [options.stdio, options.stdio, options.stdio]
-    }
-  } else if (Array.isArray(options.stdio)) {
-    if (options.stdio[0] || options.stdio[0] === 0) {
-      if (options.stdio[0] === 'inherit') {
-        stdio[0] = 0
-      } else {
-        stdio[0] = options.stdio[0]
-      }
-    }
-    if (options.stdio[1] || options.stdio[1] === 0) {
-      if (options.stdio[1] === 'inherit') {
-        stdio[1] = 1
-      } else {
-        stdio[1] = options.stdio[1]
-      }
-    }
-    if (options.stdio[2] || options.stdio[2] === 0) {
-      if (options.stdio[2] === 'inherit') {
-        stdio[2] = 2
-      } else {
-        stdio[2] = options.stdio[2]
-      }
-    }
-  }
-
-  var env = options.env
-
-  return {
-    file: file,
-    args: args,
-    options: options,
-    envPairs: env,
-    stdio: stdio
-  }
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/@skpm/child_process/lib/spawn.js":
-/*!*******************************************************!*\
-  !*** ./node_modules/@skpm/child_process/lib/spawn.js ***!
-  \*******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-/* globals NSPipe, NSTask, NSArray, NSString, coscript, __mocha__ */
-var Buffer = __webpack_require__(/*! buffer */ "buffer").Buffer
-var EventEmitter = __webpack_require__(/*! events */ "events")
-var Readable = __webpack_require__(/*! stream */ "stream").Readable
-var Writable = __webpack_require__(/*! stream */ "stream").Writable
-
-var spawnSync = __webpack_require__(/*! ./spawnSync */ "./node_modules/@skpm/child_process/lib/spawnSync.js")
-var normalizeSpawnArguments = __webpack_require__(/*! ./normalizeSpawnArguments */ "./node_modules/@skpm/child_process/lib/normalizeSpawnArguments.js")
-
-module.exports = function spawn(_command, _args, _options) {
-  var opts = normalizeSpawnArguments(_command, _args, _options)
-
-  var result = new EventEmitter()
-
-  if (opts.file[0] !== '.' && opts.file[0] !== '/' && opts.file[0] !== '~') {
-    // means that someone refered to an executable that might be in the path, let's find it
-    var whichChild = spawnSync(
-      '/bin/bash',
-      ['-l', '-c', 'which ' + opts.file],
-      { encoding: 'utf8' }
-    )
-    var resolvedCommand = String(whichChild.stdout || '').trim()
-    if (whichChild.err || !resolvedCommand.length) {
-      result.stderr = new EventEmitter()
-      result.stdout = new EventEmitter()
-
-      result.pid = '-1'
-
-      result.stderr.setEncoding = function setEncoding(encoding) {
-        result.stderr.encoding = encoding
-      }
-      result.stdout.setEncoding = function setEncoding(encoding) {
-        result.stdout.encoding = encoding
-      }
-      if (!resolvedCommand.length) {
-        result.emit('error', new Error(String(opts.file) + ' ENOENT'))
-      } else {
-        result.emit('error', whichChild.err)
-      }
-      return result
-    }
-    return spawn(resolvedCommand, _args, _options)
-  }
-
-  var options = opts.options
-
-  result.killed = false
-
-  var fiber = coscript.createFiber()
-
-  var task
-  var signal = null
-
-  var readingStderr = false
-  var readingStdout = false
-
-  result.stderr = new Readable({
-    read: function read() {
-      readingStderr = true
-    }
-  })
-  result.stdout = new Readable({
-    read: function read() {
-      readingStdout = true
-    }
-  })
-
-  function onStdout(data) {
-    if (data && data.length() && readingStdout) {
-      if (!result.stdout.push(Buffer.from(data))) {
-        readingStdout = false
-        task
-          .standardOutput()
-          .fileHandleForReading()
-          .setReadabilityHandler(null)
-      }
-    }
-  }
-  function onStderr(data) {
-    if (data && data.length() && readingStderr) {
-      if (!result.stderr.push(Buffer.from(data))) {
-        readingStderr = false
-        task
-          .standardError()
-          .fileHandleForReading()
-          .setReadabilityHandler(null)
-      }
-    }
-  }
-
-  result.sdtin = new Writable({
-    write: function write(chunk, encoding, callback) {
-      task
-        .standardInput()
-        .fileHandleForWriting()
-        .writeData(chunk.toNSData())
-      callback()
-    },
-    final: function finish(callback) {
-      task
-        .standardInput()
-        .fileHandleForWriting()
-        .closeFile()
-      callback()
-    }
-  })
-
-  result.sdtio = [result.sdtin, result.sdtout, result.sdterr]
-
-  try {
-    task = NSTask.alloc().init()
-
-    var inPipe = NSPipe.pipe()
-    var pipe = NSPipe.pipe()
-    var errPipe = NSPipe.pipe()
-
-    task.setStandardInput(inPipe)
-    task.setStandardOutput(pipe)
-    task.setStandardError(errPipe)
-
-    task
-      .standardOutput()
-      .fileHandleForReading()
-      .setReadabilityHandler(
-        __mocha__.createBlock_function(
-          'v16@?0@"NSFileHandle"8',
-          function readStdOut(fileHandle) {
-            try {
-              onStdout(fileHandle.availableData())
-            } catch (err) {
-              if (
-                typeof process !== 'undefined' &&
-                process.listenerCount &&
-                process.listenerCount('uncaughtException')
-              ) {
-                process.emit('uncaughtException', err, 'uncaughtException')
-              } else {
-                console.error(err)
-              }
-            }
-          }
-        )
-      )
-    task
-      .standardError()
-      .fileHandleForReading()
-      .setReadabilityHandler(
-        __mocha__.createBlock_function(
-          'v16@?0@"NSFileHandle"8',
-          function readStdOut(fileHandle) {
-            try {
-              onStderr(fileHandle.availableData())
-            } catch (err) {
-              if (
-                typeof process !== 'undefined' &&
-                process.listenerCount &&
-                process.listenerCount('uncaughtException')
-              ) {
-                process.emit('uncaughtException', err, 'uncaughtException')
-              } else {
-                console.error(err)
-              }
-            }
-          }
-        )
-      )
-
-    task.setLaunchPath(
-      NSString.stringWithString(opts.file).stringByExpandingTildeInPath()
-    )
-    task.arguments = NSArray.arrayWithArray(opts.args || [])
-    if (opts.envPairs) {
-      task.environment = opts.envPairs
-    }
-    if (options.cwd) {
-      task.setCurrentDirectoryPath(
-        NSString.stringWithString(options.cwd).stringByExpandingTildeInPath()
-      )
-    }
-
-    task.setTerminationHandler(
-      __mocha__.createBlock_function(
-        'v16@?0@"NSTask"8',
-        function handleTermination(_task) {
-          try {
-            _task
-              .standardError()
-              .fileHandleForReading()
-              .setReadabilityHandler(null)
-            _task
-              .standardOutput()
-              .fileHandleForReading()
-              .setReadabilityHandler(null)
-            result.stderr.emit('close')
-            result.stdout.emit('close')
-
-            result.killed = true
-
-            result.emit('close', Number(_task.terminationStatus()), signal)
-          } catch (err) {
-            if (
-              typeof process !== 'undefined' &&
-              process.listenerCount &&
-              process.listenerCount('uncaughtException')
-            ) {
-              process.emit('uncaughtException', err, 'uncaughtException')
-            } else {
-              console.error(err)
-            }
-          }
-          fiber.cleanup()
-        }
-      )
-    )
-
-    task.launch()
-  } catch (err) {
-    fiber.cleanup()
-    setImmediate(function() {
-      result.emit('error', err)
-    })
-    return result
-  }
-
-  result.kill = function kill(_signal) {
-    if (!result.killed) {
-      signal = _signal
-      task.terminate()
-    }
-  }
-
-  result.pid = String(task.processIdentifier())
-
-  return result
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/@skpm/child_process/lib/spawnSync.js":
-/*!***********************************************************!*\
-  !*** ./node_modules/@skpm/child_process/lib/spawnSync.js ***!
-  \***********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-/* globals NSPipe, NSTask, NSArray, NSString */
-var handleData = __webpack_require__(/*! ./handleData */ "./node_modules/@skpm/child_process/lib/handleData.js")
-var normalizeSpawnArguments = __webpack_require__(/*! ./normalizeSpawnArguments */ "./node_modules/@skpm/child_process/lib/normalizeSpawnArguments.js")
-
-function spawnSync(_command, _args, _options) {
-  var opts = normalizeSpawnArguments(_command, _args, _options)
-
-  if (opts.file[0] !== '.' && opts.file[0] !== '/' && opts.file[0] !== '~') {
-    // means that someone refered to an executable that might be in the path, let's find it
-    var whichChild = spawnSync(
-      '/bin/bash',
-      ['-l', '-c', 'which ' + opts.file],
-      { encoding: 'utf8' }
-    )
-    if (whichChild.err) {
-      return whichChild
-    }
-    var resolvedCommand = String(whichChild.stdout).trim()
-    if (!resolvedCommand.length) {
-      return {
-        err: new Error(String(opts.file) + ' ENOENT')
-      }
-    }
-    return spawnSync(resolvedCommand, _args, _options)
-  }
-
-  var options = opts.options
-
-  var pipe = NSPipe.pipe()
-  var errPipe = NSPipe.pipe()
-
-  try {
-    var task = NSTask.alloc().init()
-    task.setLaunchPath(
-      NSString.stringWithString(opts.file).stringByExpandingTildeInPath()
-    )
-    task.arguments = NSArray.arrayWithArray(opts.args || [])
-    if (opts.envPairs) {
-      task.environment = opts.envPairs
-    }
-
-    if (options.cwd) {
-      task.setCurrentDirectoryPath(
-        NSString.stringWithString(options.cwd).stringByExpandingTildeInPath()
-      )
-    }
-
-    task.setStandardOutput(pipe)
-    task.setStandardError(errPipe)
-
-    task.launch()
-    task.waitUntilExit()
-
-    var stdoutIgnored = false
-    var stderrIgnored = false
-
-    var data
-    var stdoutValue
-    var stderrValue
-
-    if (opts.stdio[1] === 'ignored') {
-      stdoutIgnored = true
-    } else if (opts.stdio[1] === 1) {
-      data = pipe.fileHandleForReading().readDataToEndOfFile()
-      stdoutValue = handleData(data, options.encoding || 'buffer')
-      console.log(stdoutValue)
-    } else if (opts.stdio[1] === 2) {
-      data = pipe.fileHandleForReading().readDataToEndOfFile()
-      stdoutValue = handleData(data, options.encoding || 'buffer')
-      console.error(stdoutValue)
-    }
-
-    if (opts.stdio[2] === 'ignored') {
-      stderrIgnored = true
-    } else if (opts.stdio[2] === 1) {
-      data = errPipe.fileHandleForReading().readDataToEndOfFile()
-      stderrValue = handleData(data, options.encoding || 'buffer')
-      console.log(stderrValue)
-    } else if (opts.stdio[2] === 2) {
-      data = errPipe.fileHandleForReading().readDataToEndOfFile()
-      stderrValue = handleData(data, options.encoding || 'buffer')
-      console.error(stderrValue)
-    }
-
-    return {
-      pid: String(task.processIdentifier()),
-      status: Number(task.terminationStatus()),
-      get stdout() {
-        if (stdoutIgnored) {
-          return null
-        }
-        if (stdoutValue) {
-          return stdoutValue
-        }
-        data = pipe.fileHandleForReading().readDataToEndOfFile()
-        return handleData(data, options.encoding || 'buffer')
-      },
-      get stderr() {
-        if (stderrIgnored) {
-          return null
-        }
-        if (stderrValue) {
-          return stdoutValue
-        }
-        data = errPipe.fileHandleForReading().readDataToEndOfFile()
-        return handleData(data, options.encoding || 'buffer')
-      }
-    }
-  } catch (err) {
-    return {
-      err: err
-    }
-  }
-}
-
-module.exports = spawnSync
-
+/***/ "./src/constants.js":
+/*!**************************!*\
+  !*** ./src/constants.js ***!
+  \**************************/
+/*! exports provided: SettingKeys */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SettingKeys", function() { return SettingKeys; });
+var SettingKeys = {
+  S3_BUCKET: "gxBucket",
+  S3_SECRET_KEY: "gxS3SecretKey",
+  S3_ACCESS_KEY: "gxS3AccessKey",
+  ENABLE_S3: "gxS3Enabled",
+  DESIGN_QUEUE: "DesignOpsQueue"
+};
 
 /***/ }),
 
@@ -964,196 +122,601 @@ module.exports = spawnSync
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./utils */ "./src/utils.js");
+/* harmony import */ var sketch_settings__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! sketch/settings */ "sketch/settings");
+/* harmony import */ var sketch_settings__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(sketch_settings__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _uidialog__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./uidialog */ "./src/uidialog.js");
+/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./constants */ "./src/constants.js");
+
+
 
 /* harmony default export */ __webpack_exports__["default"] = (function () {
-  var queuePath = Object(_utils__WEBPACK_IMPORTED_MODULE_0__["askQueuePath"])(queuePath);
+  // Read settings
+  var enableS3 = sketch_settings__WEBPACK_IMPORTED_MODULE_0___default.a.settingForKey(_constants__WEBPACK_IMPORTED_MODULE_2__["SettingKeys"].ENABLE_S3) == 1;
+  var s3Bucket = sketch_settings__WEBPACK_IMPORTED_MODULE_0___default.a.settingForKey(_constants__WEBPACK_IMPORTED_MODULE_2__["SettingKeys"].S3_BUCKET);
+  var s3SecretKey = sketch_settings__WEBPACK_IMPORTED_MODULE_0___default.a.settingForKey(_constants__WEBPACK_IMPORTED_MODULE_2__["SettingKeys"].S3_SECRET_KEY);
+  var s3AccessKey = sketch_settings__WEBPACK_IMPORTED_MODULE_0___default.a.settingForKey(_constants__WEBPACK_IMPORTED_MODULE_2__["SettingKeys"].S3_ACCESS_KEY);
+  var queueDesign = sketch_settings__WEBPACK_IMPORTED_MODULE_0___default.a.settingForKey(_constants__WEBPACK_IMPORTED_MODULE_2__["SettingKeys"].DESIGN_QUEUE);
+  if (undefined == queueDesign) queueDesign = "";
+  if (undefined == s3AccessKey) s3AccessKey = "<your access key here>";
+  if (undefined == s3Bucket) s3Bucket = "<your bucket name>";
+  if (undefined == s3SecretKey) s3SecretKey = "<your secret key>"; // Build dialog
+
+  var dialog = new _uidialog__WEBPACK_IMPORTED_MODULE_1__["UIDialog"]("Configure", NSMakeRect(0, 0, 400, 300), "Save", "Edit where to share your designs.");
+
+  var onCheck = function onCheck() {
+    var editable = textS3Bucket.isEditable();
+    textS3Bucket.setEnabled(!editable);
+    textS3Bucket.setEditable(!editable);
+    textS3AccessKey.setEditable(!editable);
+    textS3AccessKey.setEnabled(!editable);
+    textS3SecretKey.setEditable(!editable);
+    textS3SecretKey.setEnabled(!editable);
+    txtQueueDesign.setEditable(editable);
+    txtQueueDesign.setEnabled(editable);
+  };
+
+  dialog.addLeftLabel("", "Sharing Options");
+  dialog.addDivider();
+  dialog.addCheckbox("enableS3", "Enable S3 Sharing", enableS3, onCheck);
+  dialog.addLeftLabel("", "S3 Bucket");
+  var textS3Bucket = dialog.addTextInput("s3Bucket", "", s3Bucket, "Enter bucket name");
+  textS3Bucket.setEditable(enableS3);
+  textS3Bucket.setEnabled(enableS3);
+  dialog.addLeftLabel("", "S3 Access Key");
+  var textS3AccessKey = dialog.addTextInput("s3AccessKey", "", s3AccessKey, "Enter access Key");
+  textS3AccessKey.setEditable(enableS3);
+  textS3AccessKey.setEnabled(enableS3);
+  dialog.addLeftLabel("", "S3 Secret Key");
+  var textS3SecretKey = dialog.addTextInput("s3SecretKey", "", s3SecretKey, "Enter secret Key");
+  textS3SecretKey.setEditable(enableS3);
+  textS3SecretKey.setEnabled(enableS3);
+  dialog.addDivider();
+  dialog.addLeftLabel("", "Queue Path");
+  var txtQueueDesign = dialog.addTextInput("queueDesign", "", queueDesign, "Path to filesystem queue");
+  txtQueueDesign.setEditable(!enableS3);
+  txtQueueDesign.setEnabled(!enableS3);
+  dialog.y -= 20; // Run event loop
+
+  while (true) {
+    var result = dialog.run();
+
+    if (!result) {
+      dialog.finish();
+      return false;
+    }
+
+    var enableS3Num = dialog.views['enableS3'].state();
+    queueDesign = dialog.views['queueDesign'].stringValue() + "";
+    s3SecretKey = dialog.views['s3SecretKey'].stringValue() + "";
+    s3AccessKey = dialog.views['s3AccessKey'].stringValue() + "";
+    s3Bucket = dialog.views['s3Bucket'].stringValue() + "";
+    sketch_settings__WEBPACK_IMPORTED_MODULE_0___default.a.setSettingForKey("DesignOpsQueue", queueDesign);
+    sketch_settings__WEBPACK_IMPORTED_MODULE_0___default.a.setSettingForKey("gxS3Enabled", enableS3Num);
+    if (!s3AccessKey.startsWith("<")) sketch_settings__WEBPACK_IMPORTED_MODULE_0___default.a.setSettingForKey("gxS3AccessKey", s3AccessKey);
+    if (!s3SecretKey.startsWith("<")) sketch_settings__WEBPACK_IMPORTED_MODULE_0___default.a.setSettingForKey("gxS3SecretKey", s3SecretKey);
+    if (!s3Bucket.startsWith("<")) sketch_settings__WEBPACK_IMPORTED_MODULE_0___default.a.setSettingForKey("gxBucket", s3Bucket);
+    break;
+  }
+
+  dialog.finish();
 });
 
 /***/ }),
 
-/***/ "./src/utils.js":
-/*!**********************!*\
-  !*** ./src/utils.js ***!
-  \**********************/
-/*! exports provided: getFileAndQueueName, copyFile, generateArtboardImages, copyImages, getQueuePath, askQueuePath */
+/***/ "./src/uidialog.js":
+/*!*************************!*\
+  !*** ./src/uidialog.js ***!
+  \*************************/
+/*! exports provided: UIDialog */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getFileAndQueueName", function() { return getFileAndQueueName; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "copyFile", function() { return copyFile; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "generateArtboardImages", function() { return generateArtboardImages; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "copyImages", function() { return copyImages; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getQueuePath", function() { return getQueuePath; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "askQueuePath", function() { return askQueuePath; });
-/* harmony import */ var sketch__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! sketch */ "sketch");
-/* harmony import */ var sketch__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(sketch__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _skpm_child_process__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @skpm/child_process */ "./node_modules/@skpm/child_process/index.js");
-/* harmony import */ var _skpm_child_process__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_skpm_child_process__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "UIDialog", function() { return UIDialog; });
+function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
 
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
 
-function getFileAndQueueName(doc, queuePath) {
-  var branch = "";
-  var build = "";
-  var fileName = decodeURIComponent(doc.path).replace(/^.*[\\\/]/, '').trim();
-  var firstIndex = fileName.indexOf("(");
-  var lastIndex = fileName.lastIndexOf(")");
-  var betweenText = fileName.substr(0, firstIndex);
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
-  if (firstIndex > 0 && lastIndex > 0 && lastIndex > firstIndex) {
-    var withoutVersionPath = fileName.substr(0, firstIndex).trim() + ".sketch";
-    var branchAndBuild = fileName.substr(firstIndex + 1, lastIndex - firstIndex - 1).trim();
-    var items = branchAndBuild.split("@");
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
-    if (items.length == 2) {
-      branch = items[0].trim();
-      build = items[1].trim();
-      queuePath = queuePath + branch + "/" + build + "/";
-      fileName = withoutVersionPath;
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+var UIDialog_iconImage = null;
+var TAB_HEIGHT = 55;
+
+function Class(className, BaseClass, selectorHandlerDict) {
+  var uniqueClassName = className + NSUUID.UUID().UUIDString();
+  var delegateClassDesc = MOClassDescription.allocateDescriptionForClassWithName_superclass_(uniqueClassName, BaseClass);
+
+  for (var selectorString in selectorHandlerDict) {
+    delegateClassDesc.addInstanceMethodWithSelector_function_(selectorString, selectorHandlerDict[selectorString]);
+  }
+
+  delegateClassDesc.registerClass();
+  return NSClassFromString(uniqueClassName);
+}
+
+;
+
+var UIAbstractWindow = /*#__PURE__*/function () {
+  function UIAbstractWindow(window, intRect) {
+    _classCallCheck(this, UIAbstractWindow);
+
+    this.window = window;
+    var container = NSView.alloc().initWithFrame(intRect);
+    this.container = container;
+    this.topContainer = container;
+    this.views = [];
+    this.leftOffset = 0;
+    this.rect = intRect;
+    this.y = NSHeight(this.rect);
+    this.leftColumn = true;
+    this.leftColWidth = 120;
+    this.textOffset = 2;
+  }
+
+  _createClass(UIAbstractWindow, [{
+    key: "removeLeftColumn",
+    value: function removeLeftColumn() {
+      this.leftColumn = false;
+      this.leftColWidth = 0;
+      this.textOffset = 0;
     }
-  }
-
-  return {
-    fileName: fileName,
-    queuePath: queuePath
-  };
-}
-function copyFile(fromCopyFile, toCopyFile) {
-  console.log("Copying " + fromCopyFile);
-  console.log("To " + toCopyFile);
-  var spawn = Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_1__["spawnSync"])('cp', ["'" + fromCopyFile + "'", "'" + toCopyFile + "'"], {
-    shell: true
-  });
-
-  if (spawn.status > 0) {
-    console.log(Error(spawn.stderr));
-    return false;
-  } else {
-    return true;
-  }
-}
-function generateArtboardImages(document, path) {
-  var artboards = [];
-  document.pages.forEach(function (page) {
-    page.layers.forEach(function (layer) {
-      // Get only artboards and skip if artboard name starts with underscore
-      if (layer.type == 'Artboard' && !layer.name.startsWith('_')) {
-        artboards.push(layer);
-      }
-    });
-    var exportPath = path + page.name + '/';
-    artboards.forEach(function (ab) {
-      // Export PNG
-      sketch__WEBPACK_IMPORTED_MODULE_0___default.a.export(ab, {
-        output: exportPath
+  }, {
+    key: "initTabs",
+    value: function initTabs(tabs) {
+      var intRect = this.rect;
+      this.tabs = tabs.map(function (tab) {
+        return {
+          label: tab
+        };
       });
-    });
-  });
-}
+      var tabView = NSTabView.alloc().initWithFrame(intRect);
+      this.tabs.forEach(function (tab, index) {
+        var viewController = NSViewController.alloc().init();
+        viewController.originalSize = intRect;
+        var view = NSView.alloc().initWithFrame(intRect);
+        view.wantsLayer = false;
+        viewController.view = view;
+        var tabViewIem = NSTabViewItem.alloc().init();
+        tabViewIem.viewController = viewController;
+        tabViewIem.label = tab.label;
+        tabViewIem.initialFirstResponder = view;
+        tabView.addTabViewItem(tabViewIem);
+        tab.container = view;
+      }, this);
+      this.tabView = tabView;
+      this.container = this.tabs[0].container;
+      this.topContainer = tabView;
+      this.leftOffset = 20;
+      this.y = NSHeight(this.rect) - TAB_HEIGHT;
+    }
+  }, {
+    key: "setTabForViewsCreating",
+    value: function setTabForViewsCreating(tabIndex) {
+      this.container = this.tabs[tabIndex].container;
+      this.y = NSHeight(this.rect) - TAB_HEIGHT;
+    }
+  }, {
+    key: "enableTextByID",
+    value: function enableTextByID(id, enabled) {
+      if (!(id in dialog.views)) return;
+      var text = dialog.views[id];
+      if (!enabled) text.textColor = NSColor.disabledControlTextColor();else text.textColor = NSColor.controlTextColor();
+    }
+  }, {
+    key: "enableHintByID",
+    value: function enableHintByID(id, enabled) {
+      if (!(id in dialog.views)) return;
+      var text = dialog.views[id];
+      if (!enabled) text.textColor = NSColor.disabledControlTextColor();else text.textColor = NSColor.secondaryLabelColor();
+    }
+  }, {
+    key: "enableControlByID",
+    value: function enableControlByID(id, enabled) {
+      var control = dialog.views[id];
+      control.enabled = enabled;
+      this.enableTextByID(id + 'Label', enabled);
+      this.enableHintByID(id + 'Hint', enabled);
+    }
+  }, {
+    key: "getNewFrame",
+    value: function getNewFrame() {
+      var height = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 25;
+      var width = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : -1;
+      var yinc = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : -1;
+      var frame = NSMakeRect(this.leftColWidth, this.y - height, width == -1 ? NSWidth(this.rect) - 10 - this.leftColWidth : width, height);
+      this.y -= height + (yinc >= 0 ? yinc : 10);
+      return frame;
+    }
+  }, {
+    key: "addSpace",
+    value: function addSpace() {
+      this.getNewFrame(0);
+    }
+  }, {
+    key: "addLeftLabel",
+    value: function addLeftLabel(id, text) {
+      var height = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 40;
+      var frame = null;
+      if (this.leftColumn) frame = NSMakeRect(0, this.y - height - this.textOffset, this.leftColWidth - 10, height);else frame = this.getNewFrame(height);
+      var label = NSTextField.alloc().initWithFrame(frame);
+      label.setStringValue(text);
+      label.setBezeled(false);
+      label.setDrawsBackground(false);
+      label.setEditable(false);
+      label.setSelectable(false);
 
-var exportLayer = function exportLayer(layer, path) {
-  if (layer.exportFormats && layer.exportFormats.length > 0) {
-    var formats = new Array();
-    var scales = new Array();
-    var prefixes = new Array();
-    layer.exportFormats.forEach(function (ef) {
-      formats.push(ef.fileFormat);
-      scales.push(ef.size);
-    });
-    if (layer.name) console.log("Exporting " + layer.name);
-    var options = {
-      output: path,
-      formats: formats.join(","),
-      scales: scales.join(","),
-      prefixes: "md"
-    };
-    sketch__WEBPACK_IMPORTED_MODULE_0___default.a.export(layer, options);
-  }
+      if (this.leftColumn) {
+        label.setFont(NSFont.boldSystemFontOfSize(12));
+        label.setAlignment(NSTextAlignmentRight);
+      }
 
-  if (layer.layers) {
-    layer.layers.forEach(function (child) {
-      return exportLayer(child, path);
-    });
-  }
-};
+      if ('' != id) this.views[id] = label;
+      this.container.addSubview(label);
+      return label;
+    }
+  }, {
+    key: "addLabel",
+    value: function addLabel(id, text) {
+      var height = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 25;
+      var frame = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : undefined;
+      var myframe = frame ? Utils.copyRect(frame) : undefined;
+      if (myframe) myframe.size.height = height;
+      var label = NSTextField.alloc().initWithFrame(myframe ? myframe : this.getNewFrame(height));
+      label.setStringValue(text);
+      label.setBezeled(false);
+      label.setDrawsBackground(false);
+      label.setEditable(false);
+      label.setSelectable(false);
+      if ('' != id) this.views[id] = label;
+      this.container.addSubview(label);
+      this.y += 5;
+      return label;
+    } // required:  id:, options:
+    // opional:  label: "", width: 220, frame: undefined
 
-function copyImages(queuePath, fileName, doc) {
-  var imageFolder = queuePath + fileName.replace(".sketch", "Images");
-  generateArtboardImages(doc, imageFolder);
-  console.log("Images to :" + imageFolder);
-  doc.pages.forEach(function (page) {
-    page.layers.forEach(function (layer) {
-      exportLayer(layer, imageFolder);
-    });
-  });
-}
-function getQueuePath() {
-  var queuePath = sketch__WEBPACK_IMPORTED_MODULE_0___default.a.Settings.settingForKey("DesignOpsQueue");
-  if (queuePath) return queuePath;
-  return askQueuePath();
-}
-function askQueuePath() {
-  var queuePath = sketch__WEBPACK_IMPORTED_MODULE_0___default.a.Settings.settingForKey("DesignOpsQueue");
-  console.log("The actual queuePath is :" + queuePath);
-  if (!(queuePath !== undefined)) queuePath = '/Volumes/cable/DesignOpsQueue/';
-  sketch__WEBPACK_IMPORTED_MODULE_0___default.a.UI.getInputFromUser("Where is the Design Ops Queue", {
-    initialValue: queuePath
-  }, function (err, value) {
-    if (err) {
-      return null;
+  }, {
+    key: "addComboBox",
+    value: function addComboBox(opt) {
+      if (undefined == opt.label) opt.label = "";
+      if (undefined == opt.width) opt.width = 220;
+      if (opt.label != '') this.addLabel(id + "Label", opt.label, 17);
+      var v = NSComboBox.alloc().initWithFrame(opt.frame ? opt.frame : this.getNewFrame(20, opt.width));
+
+      if (opt.options.length > 0) {
+        v.addItemsWithObjectValues(opt.options);
+        v.setNumberOfVisibleItems(opt.options.length);
+        v.selectItemAtIndex(0);
+      }
+
+      v.setCompletes(1);
+      this.container.addSubview(v);
+      this.views[opt.id] = v;
+      return v;
+    }
+  }, {
+    key: "addCheckbox",
+    value: function addCheckbox(id, label, checked, func) {
+      var height = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 18;
+      checked = checked == false ? NSOffState : NSOnState;
+      var checkbox = NSButton.alloc().initWithFrame(this.getNewFrame(height, -1, 6));
+      checkbox.setButtonType(NSSwitchButton);
+      checkbox.setBezelStyle(0);
+      checkbox.setTitle(label);
+      checkbox.setState(checked);
+      checkbox.setCOSJSTargetFunction(func);
+      this.container.addSubview(checkbox);
+      this.views[id] = checkbox;
+      return checkbox;
+    }
+  }, {
+    key: "addTextBox",
+    value: function addTextBox(id, label, textValue) {
+      var inlineHint = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : "";
+      var height = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 120;
+      if (label != '') this.addLabel(id + "Label", label, 17);
+      var textBox = NSTextField.alloc().initWithFrame(this.getNewFrame(height));
+      textBox.setEditable(true);
+      textBox.setBordered(true);
+      textBox.setStringValue(textValue);
+
+      if (inlineHint != "") {
+        textBox.setPlaceholderString(inlineHint);
+      }
+
+      this.container.addSubview(textBox);
+      this.views[id] = textBox;
+      return textBox;
+    }
+  }, {
+    key: "addTextViewBox",
+    value: function addTextViewBox(id, label, textValue) {
+      var height = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 120;
+      if (label != '') this.addLabel(id + "Label", label, 17);
+      var frame = this.getNewFrame(height);
+      var scrollView = NSScrollView.alloc().initWithFrame(frame);
+      scrollView.setHasVerticalScroller(true);
+      scrollView.setHasHorizontalScroller(true);
+      var textView = NSTextView.alloc().initWithFrame(frame);
+      textView.setEditable(false);
+      textView.setString(textValue + "");
+      scrollView.addSubview(textView);
+      scrollView.setDocumentView(textView);
+      this.container.addSubview(scrollView);
+      this.views[id] = textView;
+      return textView;
+    }
+  }, {
+    key: "addTextInput",
+    value: function addTextInput(id, label, textValue) {
+      var inlineHint = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : "";
+      var width = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 220;
+      var frame = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : undefined;
+      if (label != '') this.addLabel(id + "Label", label, 17, frame);
+      var input = NSTextField.alloc().initWithFrame(frame ? frame : this.getNewFrame(20, width));
+      input.setEditable(true);
+      input.setBordered(true);
+      input.setStringValue(textValue + "");
+
+      if (inlineHint != "") {
+        input.setPlaceholderString(inlineHint);
+      }
+
+      this.container.addSubview(input);
+      this.views[id] = input;
+      return input;
+    } // opt: required: id, label, labelSelect, textValue
+    //      optional: inlineHint = "", width = 220, widthSelect = 50), askFilePath=false
+    //       comboBoxOptions: string array
+
+  }, {
+    key: "addPathInput",
+    value: function addPathInput(opt) {
+      if (!('width' in opt)) opt.width = 220;
+      if (!('widthSelect' in opt)) opt.widthSelect = 50;
+      if (!('inlineHint' in opt)) opt.inlineHint = "";
+      if (!('askFilePath' in opt)) opt.askFilePath = false;
+      if (opt.label != '') this.addLabel(opt.id + "Label", opt.label, 17);
+      var frame = this.getNewFrame(28, opt.width - opt.widthSelect - 5);
+      var frame2 = Utils.copyRect(frame);
+      frame2.origin.x = frame2.origin.x + opt.width - opt.widthSelect;
+      frame2.origin.y -= 3;
+      var input = 'comboBoxOptions' in opt ? this.addComboBox({
+        id: opt.id,
+        options: opt.comboBoxOptions,
+        width: 0,
+        frame: frame
+      }) : this.addTextInput(opt.id, "", opt.textValue, opt.inlineHint, 0, frame);
+      this.addButton(opt.id + "Select", opt.labelSelect, function () {
+        var newPath = opt.askFilePath ? Utils.askFilePath(input.stringValue() + "") : Utils.askPath(input.stringValue() + "");
+
+        if (newPath != null) {
+          input.setStringValue(newPath);
+        }
+
+        return;
+      }, 0, frame2);
+      return input;
+    }
+  }, {
+    key: "addSelect",
+    value: function addSelect(id, label, selectItem, options) {
+      var width = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 100;
+      if (label != '') this.addLabel(id + "Label", label, 15);
+      var v = NSPopUpButton.alloc().initWithFrame(this.getNewFrame(23, width));
+      v.addItemsWithTitles(options);
+      v.selectItemAtIndex(selectItem);
+      this.container.addSubview(v);
+      this.views[id] = v;
+      return v;
+    }
+  }, {
+    key: "addRadioButtons",
+    value: function addRadioButtons(id, label, selectItem, options) {
+      var width = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 100;
+      if (label != '') this.addLabel(id + "Label", label, 15); // pre-select the first item
+
+      if (selectItem < 0) selectItem = 0;
+      var group = this.startRadioButtions(id, selectItem);
+      var _iteratorNormalCompletion = true;
+      var _didIteratorError = false;
+      var _iteratorError = undefined;
+
+      try {
+        for (var _iterator = options[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+          var item = _step.value;
+          var index = group.btns.length;
+          var btn = NSButton.alloc().initWithFrame(this.getNewFrame(18, width));
+          btn.setButtonType(NSRadioButton);
+          btn.setTitle(item);
+          btn.setState(index != selectItem ? NSOffState : NSOnState);
+          btn.myGroup = group;
+          btn.myIndex = index;
+          btn.setCOSJSTargetFunction(group.radioTargetFunction);
+          this.container.addSubview(btn);
+          group.btns.push(btn);
+        }
+      } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion && _iterator.return != null) {
+            _iterator.return();
+          }
+        } finally {
+          if (_didIteratorError) {
+            throw _iteratorError;
+          }
+        }
+      }
+
+      return group;
+    }
+  }, {
+    key: "startRadioButtions",
+    value: function startRadioButtions(idGroup, selectedIndex) {
+      var groups = {
+        id: idGroup,
+        btns: [],
+        selectedIndex: selectedIndex,
+        radioTargetFunction: function radioTargetFunction(sender) {
+          sender.myGroup.selectedIndex = sender.myIndex;
+        }
+      };
+      this._buttonsGroups = groups;
+      this.views[idGroup] = this._buttonsGroups;
+      return this._buttonsGroups;
+    }
+  }, {
+    key: "addRadioButton",
+    value: function addRadioButton(id, title, index, frame) {
+      var selected = this._buttonsGroups.selectedIndex == index;
+      var btn = NSButton.alloc().initWithFrame(frame);
+      btn.setButtonType(NSRadioButton);
+      if (title != '') btn.setTitle(title);
+      btn.setState(!selected ? NSOffState : NSOnState);
+      btn.myGroup = this._buttonsGroups;
+      btn.myIndex = index;
+      btn.setCOSJSTargetFunction(this._buttonsGroups.radioTargetFunction);
+      this.views[id] = btn;
+      this.container.addSubview(btn);
+
+      this._buttonsGroups.btns.push(btn);
+
+      return btn;
+    }
+  }, {
+    key: "addButton",
+    value: function addButton(id, label, func) {
+      var width = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 100;
+      var frame = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : undefined;
+      // create OK button
+      var btn = NSButton.alloc().initWithFrame(frame ? frame : this.getNewFrame(20, width));
+      btn.setTitle(label);
+      btn.setBezelStyle(NSRoundedBezelStyle);
+      btn.sizeToFit();
+      btn.setCOSJSTargetFunction(func);
+      this.container.addSubview(btn);
+      this.views[id] = btn;
+      return btn;
+    }
+  }, {
+    key: "addHint",
+    value: function addHint(id, label) {
+      var height = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 23;
+      this.y += 3;
+      var hint = NSTextField.alloc().initWithFrame(this.getNewFrame(height, -1, 3));
+      hint.setStringValue(label);
+      hint.setColor = NSColor.secondaryLabelColor();
+      hint.setBezeled(false);
+      hint.setDrawsBackground(false);
+      hint.setEditable(false);
+      hint.setSelectable(false);
+      hint.setFont(NSFont.systemFontOfSize(10));
+      this.container.addSubview(hint);
+      if ('' != id) this.views[id] = hint;
+      return hint;
+    }
+  }, {
+    key: "addDivider",
+    value: function addDivider() {
+      var height = 1;
+      var frame = NSMakeRect(0, this.y - height, NSWidth(this.rect) - 10, height);
+      this.y -= height + 10;
+      var divider = NSView.alloc().initWithFrame(frame);
+      divider.setWantsLayer(1);
+      divider.layer().setBackgroundColor(CGColorCreateGenericRGB(204 / 255, 204 / 255, 204 / 255, 1));
+      this.container.addSubview(divider);
+      return divider;
+    } // image: NSImage
+
+  }, {
+    key: "addImage",
+    value: function addImage(id, image, frame) {
+      var nImageView = NSImageView.alloc().initWithFrame(frame);
+      nImageView.setImage(image);
+      this.container.addSubview(nImageView);
+      this.views[id] = nImageView;
+      return nImageView;
+    }
+  }, {
+    key: "finish",
+    value: function finish() {
+      this.window = null;
+    }
+  }]);
+
+  return UIAbstractWindow;
+}();
+
+var UIDialog = /*#__PURE__*/function (_UIAbstractWindow) {
+  _inherits(UIDialog, _UIAbstractWindow);
+
+  _createClass(UIDialog, null, [{
+    key: "setUp",
+    value: function setUp(context) {
+      UIDialog_iconImage = NSImage.alloc().initByReferencingFile(context.plugin.urlForResourceNamed("icon.png").path());
+    }
+  }]);
+
+  function UIDialog(title, rect, okButtonTitle) {
+    var description = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : '';
+    var cancelButtonTitle = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : "Cancel";
+    var thirdButtonTitle = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : undefined;
+
+    _classCallCheck(this, UIDialog);
+
+    var window = NSAlert.alloc().init(); //   window.setIcon(UIDialog_iconImage)
+
+    window.setMessageText(title);
+
+    if (description != '') {
+      window.setInformativeText(description);
     }
 
-    console.log(value);
-    queuePath = value;
-    sketch__WEBPACK_IMPORTED_MODULE_0___default.a.Settings.setSettingForKey("DesignOpsQueue", queuePath);
-  });
-  return queuePath;
-}
+    if (okButtonTitle) window.addButtonWithTitle(okButtonTitle);
+    if (cancelButtonTitle) window.addButtonWithTitle(cancelButtonTitle);
+    if (thirdButtonTitle) window.addButtonWithTitle(thirdButtonTitle);
+    return _possibleConstructorReturn(this, _getPrototypeOf(UIDialog).call(this, window, rect));
+  }
+
+  _createClass(UIDialog, [{
+    key: "run",
+    value: function run() {
+      this.window.setAccessoryView(this.topContainer);
+      var res = this.window.runModal();
+      this.userClickedOk = res == '1000';
+      this.userClickedCancel = res == '1001';
+      this.userClickedThird = res == '1002';
+      return this.userClickedOk;
+    }
+  }]);
+
+  return UIDialog;
+}(UIAbstractWindow);
 
 /***/ }),
 
-/***/ "buffer":
-/*!*************************!*\
-  !*** external "buffer" ***!
-  \*************************/
+/***/ "sketch/settings":
+/*!**********************************!*\
+  !*** external "sketch/settings" ***!
+  \**********************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = require("buffer");
-
-/***/ }),
-
-/***/ "events":
-/*!*************************!*\
-  !*** external "events" ***!
-  \*************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = require("events");
-
-/***/ }),
-
-/***/ "sketch":
-/*!*************************!*\
-  !*** external "sketch" ***!
-  \*************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = require("sketch");
-
-/***/ }),
-
-/***/ "stream":
-/*!*************************!*\
-  !*** external "stream" ***!
-  \*************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = require("stream");
+module.exports = require("sketch/settings");
 
 /***/ })
 

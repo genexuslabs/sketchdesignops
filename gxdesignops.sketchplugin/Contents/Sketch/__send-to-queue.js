@@ -955,6 +955,26 @@ module.exports = spawnSync
 
 /***/ }),
 
+/***/ "./src/constants.js":
+/*!**************************!*\
+  !*** ./src/constants.js ***!
+  \**************************/
+/*! exports provided: SettingKeys */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SettingKeys", function() { return SettingKeys; });
+var SettingKeys = {
+  S3_BUCKET: "gxBucket",
+  S3_SECRET_KEY: "gxS3SecretKey",
+  S3_ACCESS_KEY: "gxS3AccessKey",
+  ENABLE_S3: "gxS3Enabled",
+  DESIGN_QUEUE: "DesignOpsQueue"
+};
+
+/***/ }),
+
 /***/ "./src/send-to-queue.js":
 /*!******************************!*\
   !*** ./src/send-to-queue.js ***!
@@ -970,6 +990,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./utils */ "./src/utils.js");
 /* harmony import */ var _skpm_child_process__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @skpm/child_process */ "./node_modules/@skpm/child_process/index.js");
 /* harmony import */ var _skpm_child_process__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_skpm_child_process__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var sketch_settings__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! sketch/settings */ "sketch/settings");
+/* harmony import */ var sketch_settings__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(sketch_settings__WEBPACK_IMPORTED_MODULE_3__);
+/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./constants */ "./src/constants.js");
+
+
 
 
 
@@ -997,12 +1022,23 @@ function copySketch(queuePath, doc, images) {
   if (images) Object(_utils__WEBPACK_IMPORTED_MODULE_1__["copyImages"])(queuePath, fileName, doc);
   var fromCopyFile = decodeURIComponent(doc.path);
   var toCopyFile = queuePath + fileName;
-  var ret = Object(_utils__WEBPACK_IMPORTED_MODULE_1__["copyFile"])(fromCopyFile, toCopyFile);
+  var enableS3 = sketch_settings__WEBPACK_IMPORTED_MODULE_3___default.a.settingForKey(_constants__WEBPACK_IMPORTED_MODULE_4__["SettingKeys"].ENABLE_S3) == 1;
+  var s3Bucket = sketch_settings__WEBPACK_IMPORTED_MODULE_3___default.a.settingForKey(_constants__WEBPACK_IMPORTED_MODULE_4__["SettingKeys"].S3_BUCKET);
+  var s3SecretKey = sketch_settings__WEBPACK_IMPORTED_MODULE_3___default.a.settingForKey(_constants__WEBPACK_IMPORTED_MODULE_4__["SettingKeys"].S3_SECRET_KEY);
+  var s3AccessKey = sketch_settings__WEBPACK_IMPORTED_MODULE_3___default.a.settingForKey(_constants__WEBPACK_IMPORTED_MODULE_4__["SettingKeys"].S3_ACCESS_KEY);
 
-  if (!ret) {
-    sketch__WEBPACK_IMPORTED_MODULE_0___default.a.UI.message("😔 Some error occurs, see console for further details");
+  if (enableS3) {
+    console.log("uploading " + toCopyFile);
+    console.log("fileName " + fileName);
+    Object(_utils__WEBPACK_IMPORTED_MODULE_1__["uploadToS3"])(fileName, fromCopyFile, s3Bucket, s3SecretKey, s3AccessKey);
   } else {
-    sketch__WEBPACK_IMPORTED_MODULE_0___default.a.UI.message("Copied to Design Ops Queue ! 💚");
+    var ret = Object(_utils__WEBPACK_IMPORTED_MODULE_1__["copyFile"])(fromCopyFile, toCopyFile);
+
+    if (!ret) {
+      sketch__WEBPACK_IMPORTED_MODULE_0___default.a.UI.message("😔 Some error occurs, see console for further details");
+    } else {
+      sketch__WEBPACK_IMPORTED_MODULE_0___default.a.UI.message("Copied to Design Ops Queue ! 💚");
+    }
   }
 }
 
@@ -1012,12 +1048,13 @@ function copySketch(queuePath, doc, images) {
 /*!**********************!*\
   !*** ./src/utils.js ***!
   \**********************/
-/*! exports provided: getFileAndQueueName, copyFile, generateArtboardImages, copyImages, getQueuePath, askQueuePath */
+/*! exports provided: getFileAndQueueName, uploadToS3, copyFile, generateArtboardImages, copyImages, getQueuePath, askQueuePath */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getFileAndQueueName", function() { return getFileAndQueueName; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "uploadToS3", function() { return uploadToS3; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "copyFile", function() { return copyFile; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "generateArtboardImages", function() { return generateArtboardImages; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "copyImages", function() { return copyImages; });
@@ -1054,6 +1091,30 @@ function getFileAndQueueName(doc, queuePath) {
     fileName: fileName,
     queuePath: queuePath
   };
+}
+function uploadToS3(fileName, file, bucketName, s3Secret, s3Key) {
+  fileName = fileName.replace(/[^a-z0-9.]/gi, '_');
+  var dateValue = Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_1__["execSync"])("date -R").toString().replace(/\r?\n|\r/, "");
+  console.log("Date:" + dateValue);
+  var bucket = bucketName;
+  var resource = "/".concat(bucket, "/").concat(fileName);
+  var contentType = "application/x-compressed-tar";
+  var signature;
+  var stringToSign = "\"PUT\n\napplication/x-compressed-tar\n".concat(dateValue, "\n").concat(resource, "\"");
+  console.log(stringToSign);
+  var signMethod = "echo -en ".concat(stringToSign, " | openssl sha1 -hmac ").concat(s3Secret, " -binary | base64");
+  console.log(signMethod);
+  var signatureObj = Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_1__["execSync"])(signMethod);
+
+  if (signatureObj) {
+    signature = signatureObj.toString().replace(/\r?\n|\r/, "");
+    console.log("Signature: " + signature.toString());
+  }
+
+  var curl_command = "curl -X PUT -T \"".concat(file, "\" -H \"Host: ").concat(bucket, ".s3.amazonaws.com\" -H \"Date: ").concat(dateValue, "\" -H \"Content-Type: ").concat(contentType, "\" -H \"Authorization: AWS ").concat(s3Key, ":").concat(signature, "\" https://").concat(bucket, ".s3.amazonaws.com/").concat(fileName);
+  console.log(curl_command);
+  var test = Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_1__["execSync"])(curl_command);
+  if (test) console.log(test.toString());
 }
 function copyFile(fromCopyFile, toCopyFile) {
   console.log("Copying " + fromCopyFile);
@@ -1179,6 +1240,17 @@ module.exports = require("events");
 /***/ (function(module, exports) {
 
 module.exports = require("sketch");
+
+/***/ }),
+
+/***/ "sketch/settings":
+/*!**********************************!*\
+  !*** external "sketch/settings" ***!
+  \**********************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = require("sketch/settings");
 
 /***/ }),
 
