@@ -32,14 +32,13 @@
     "title": "GxDesignOps",
     "items": [
       "gxdesignops.send-to-queue-identifier-gx",
-      "gxdesignops.send-to-queue-identifier",
       "gxdesignops.file-send-to-queue-identifier",
       "-",
       "gxdesignops.see-result",
       "gxdesignops.set-queue-path"
     ]
   },
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Sketch Plugin For GeneXus Design Ops Cycles",
   "name": "GxDesignOps",
   "identifier": "GxDesignOps",

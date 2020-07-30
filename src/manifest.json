@@ -32,7 +32,6 @@
     "title": "GxDesignOps",
     "items": [
       "gxdesignops.send-to-queue-identifier-gx",
-      "gxdesignops.send-to-queue-identifier",
       "gxdesignops.file-send-to-queue-identifier",
       "-",
       "gxdesignops.see-result", 
