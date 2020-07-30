@@ -23,7 +23,7 @@ If you are going to share by a shared folder just be sure both developers and de
 This is the recommended option to share design between GeneXus Developers and Designers.
 GeneXus Format can contain all the information needed to be used with the GeneXus Sketch Inspector in the GeneXus IDE.
 
-The GeneXus Format is just a zip format with the following structure:
+The GeneXus Format (.gxsketch) is just a zip format with the following structure:
 
 - gx
     - gx-preview  (When Send Preview Pages is enabled , Images for all pages are included here, to be used by the inspector to show preview to developers)
@@ -40,4 +40,4 @@ As the command say it only will share the actual sketch document.
 
 # Output
 
-The plugin will copy the current .sketch file and all the exportable images to the shared folder Queue.
+The plugin will copy the current .sketch or .gxsketch file and all the exportable images to the shared folder Queue or to the given S3 bucket.
