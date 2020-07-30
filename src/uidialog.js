@@ -427,12 +427,12 @@ class UIAbstractWindow {
 export class UIDialog extends UIAbstractWindow {
 
     static setUp(context) {
-        UIDialog_iconImage = NSImage.alloc().initByReferencingFile(context.plugin.urlForResourceNamed("icon.png").path())
+        UIDialog_iconImage = NSImage.alloc().initByReferencingFile(context.plugin.urlForResourceNamed("gx.png").path())
     }
 
     constructor(title, rect, okButtonTitle, description = '', cancelButtonTitle = "Cancel",thirdButtonTitle=undefined) {
         var window = NSAlert.alloc().init()
-     //   window.setIcon(UIDialog_iconImage)
+        window.setIcon(UIDialog_iconImage)
         window.setMessageText(title)
         if (description != '') {
             window.setInformativeText(description)

@@ -5,5 +5,7 @@ export var   SettingKeys = {
     S3_ACCESS_KEY : "gxS3AccessKey",
     ENABLE_S3: "gxS3Enabled" ,
     DESIGN_QUEUE: "DesignOpsQueue",
+    ENABLE_PREVIEW: "enablePreview",
+    ENABLE_FONTS: "enableFonts"
 };
 

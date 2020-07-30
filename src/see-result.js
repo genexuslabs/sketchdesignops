@@ -2,18 +2,27 @@ import sketch from 'sketch';
 
 
 import { spawnSync , execSync} from '@skpm/child_process';
-import { getFileAndQueueName, getQueuePath } from './utils';
+import { getFileAndQueueName, getQueuePath, copyFonts } from './utils';
 import { os } from '@skpm/os';
 
 var UI = require("sketch/ui");
 var zip = require("jszip");
 
 
+function getFonts() {
+  var fontManager = NSFontManager.sharedFontManager();
+  var fonts = [];
+  var sys_fonts = fontManager.availableFonts();
+  //has to convert them to normal array, as {sys_fonts} is array-like object, and is persistent, so when modified, changes stay between runs of script
+  for (var i = 0; i < sys_fonts.length; ++i) {
+      fonts.push(sys_fonts[i]);
+  }
+  return fonts;
+}
 
 
 export default function () {
   
-  const doc = sketch.getSelectedDocument()
   var queuePath = getQueuePath(queuePath);
   var fileName;
   ({ fileName, queuePath } = getFileAndQueueName(doc, queuePath));

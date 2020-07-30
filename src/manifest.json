@@ -23,7 +23,7 @@
       "script": "./see-result.js"
     },
     {
-      "name": "Configure Queue Path",
+      "name": "Configuration",
       "identifier": "gxdesignops.set-queue-path",
       "script": "./set-queue-path.js"
     }

@@ -23,7 +23,7 @@
       "script": "__see-result.js"
     },
     {
-      "name": "Configure Queue Path",
+      "name": "Configuration",
       "identifier": "gxdesignops.set-queue-path",
       "script": "__set-queue-path.js"
     }
@@ -39,7 +39,7 @@
       "gxdesignops.set-queue-path"
     ]
   },
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Sketch Plugin For GeneXus Design Ops Cycles",
   "name": "GxDesignOps",
   "identifier": "GxDesignOps",
