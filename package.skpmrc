@@ -1,0 +1,4 @@
+notarization:
+  authority: 'Developer ID Application: GeneXus S.A.'
+  username: 'gaston.milano@gmail.com'
+  password: '@keychain:AC_PASSWORD'
