@@ -168,7 +168,7 @@ export function copyFonts(doc, path)
     fontLibraryPaths.forEach( libraryPath => {
       try
       {
-        var cmdCpy = `cp ${libraryPath}${fontName.replace(/\s/g, "-")}* ${path}`
+        var cmdCpy = `cp ${libraryPath}*${fontName.replace(/\s/g, "-")}* ${path}`
         console.log(cmdCpy);
         execSync(cmdCpy);
         console.log(fontName + " Copied!");
