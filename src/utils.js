@@ -142,9 +142,34 @@ var traverseFonts = function (layer, fonts)
 {
   if (layer.type == "Text" && layer.style.fontFamily != "Helvetica") {
     console.log(layer.style.fontFamily + "-" + layer.style.fontWeight);
-    if (!fonts.includes(layer.style.fontFamily))
-      fonts.push(layer.style.fontFamily);
- //   console.log(JSON.stringify(layer.style));
+    var processFontName = false;
+    if (layer.style.fontFamily.includes(" "))
+    {
+      var withoutSpacesName = layer.style.fontFamily.replace(/\s/g, "");
+      var withSeparator = layer.style.fontFamily.replace(/\s/g, "-");
+      processFontName = true
+    }
+    var fontName = NSFontManager.sharedFontManager().fontWithFamily_traits_weight_size(layer.style.fontFamily, 0, layer.style.fontWeight, layer.style.fontSize).fontName()
+    var displayName = NSFontManager.sharedFontManager().fontWithFamily_traits_weight_size(layer.style.fontFamily, 0, layer.style.fontWeight, layer.style.fontSize).displayName()
+    console.log("FONT NAME:" + fontName);
+    console.log("Display NAME:" + displayName);
+    if (String(fontName).localeCompare(String(displayName)) != 0)
+    {
+      if (!fonts.includes(String(displayName))) {
+        fonts.push(String(displayName))
+      }
+    }
+    if (processFontName)
+    {
+      fontName = fontName.replace(withoutSpacesName, withSeparator);
+      console.log("Font to look for:" + fontName);
+    }
+    var font = String(fontName);
+    if (!fonts.includes(font))
+    {
+      fonts.push(String(font));
+    }
+    
   }
   if (layer.layers) {
   layer.layers.forEach( l => {
@@ -163,12 +188,13 @@ export function copyFonts(doc, path)
       console.log("Copying Fonts for page " + page.name);
       traverseFonts(page, fonts);
   });
+  console.log("Fonts to Copy: " + JSON.stringify(fonts));
   var fontLibraryPaths = [ "/Network/Library/Fonts/", "~/Library/Fonts/" , "/Library/Fonts/", "/System/Library/Fonts/"];
   fonts.forEach( fontName => {
     fontLibraryPaths.forEach( libraryPath => {
       try
       {
-        var cmdCpy = `cp ${libraryPath}*${fontName.replace(/\s/g, "-")}* ${path}`
+        var cmdCpy = `cp ${libraryPath}*${fontName.replace(/\s/g, '\\ ')}* ${path}`
         console.log(cmdCpy);
         execSync(cmdCpy);
         console.log(fontName + " Copied!");
