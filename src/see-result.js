@@ -22,7 +22,6 @@ function getFonts() {
 
 
 export default function () {
-  
   var queuePath = getQueuePath(queuePath);
   var fileName;
   ({ fileName, queuePath } = getFileAndQueueName(doc, queuePath));
@@ -39,7 +38,7 @@ export default function () {
     sketch.UI.message("😔 Some error occurs, see console for further details");
   }
   else
-    sketch.UI.message("Opening the result ! 💚");
+    sketch.UI.message("Opening the result ! 💚"); 
 }
 
 

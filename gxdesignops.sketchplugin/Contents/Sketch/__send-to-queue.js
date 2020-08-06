@@ -3922,30 +3922,10 @@ var exportLayer = function exportLayer(layer, path) {
 var traverseFonts = function traverseFonts(layer, fonts) {
   if (layer.type == "Text" && layer.style.fontFamily != "Helvetica") {
     console.log(layer.style.fontFamily + "-" + layer.style.fontWeight);
-    var processFontName = false;
-
-    if (layer.style.fontFamily.includes(" ")) {
-      var withoutSpacesName = layer.style.fontFamily.replace(/\s/g, "");
-      var withSeparator = layer.style.fontFamily.replace(/\s/g, "-");
-      processFontName = true;
-    }
-
     var fontName = NSFontManager.sharedFontManager().fontWithFamily_traits_weight_size(layer.style.fontFamily, 0, layer.style.fontWeight, layer.style.fontSize).fontName();
     var displayName = NSFontManager.sharedFontManager().fontWithFamily_traits_weight_size(layer.style.fontFamily, 0, layer.style.fontWeight, layer.style.fontSize).displayName();
     console.log("FONT NAME:" + fontName);
     console.log("Display NAME:" + displayName);
-
-    if (String(fontName).localeCompare(String(displayName)) != 0) {
-      if (!fonts.includes(String(displayName))) {
-        fonts.push(String(displayName));
-      }
-    }
-
-    if (processFontName) {
-      fontName = fontName.replace(withoutSpacesName, withSeparator);
-      console.log("Font to look for:" + fontName);
-    }
-
     var font = String(fontName);
 
     if (!fonts.includes(font)) {
@@ -3960,6 +3940,33 @@ var traverseFonts = function traverseFonts(layer, fonts) {
   }
 };
 
+function getFiles(path) {
+  console.log("Getting Files " + path);
+  var lsCommand = "ls ".concat(path, "*.*");
+
+  try {
+    var ret = Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_2__["execSync"])(lsCommand);
+
+    if (ret) {
+      return ret.toString().split('\n');
+    }
+  } catch (_unused) {}
+
+  return [];
+}
+
+function getPostcriptNames(path) {
+  console.log("Getting postcriptNames " + path);
+
+  try {
+    var fontNameCmd = "mdls -name com_apple_ats_name_postscript ".concat(path, "*.* -raw");
+    var retMetadata = Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_2__["execSync"])(fontNameCmd);
+    if (retMetadata) return retMetadata.toString();
+  } catch (_unused2) {}
+
+  return "";
+}
+
 function copyFonts(doc, path) {
   var fonts = [];
   doc.pages.forEach(function (page) {
@@ -3969,15 +3976,38 @@ function copyFonts(doc, path) {
   });
   console.log("Fonts to Copy: " + JSON.stringify(fonts));
   var fontLibraryPaths = ["/Network/Library/Fonts/", "~/Library/Fonts/", "/Library/Fonts/", "/System/Library/Fonts/"];
+  var mapping = {};
+  fontLibraryPaths.forEach(function (libraryPath) {
+    var index = 0;
+    var files = getFiles(libraryPath);
+    var start = -1;
+    var end = -1;
+    var output = getPostcriptNames(libraryPath);
+
+    for (var i = 0; i < output.length; i++) {
+      var strChar = output.charAt(i);
+
+      if (strChar === ')') {
+        end = i;
+        var key = output.substr(start, end - start).trim().replace(/\"/g, "");
+
+        if (!(key in mapping)) {
+          mapping[key] = files[index];
+        }
+
+        index++;
+        start = -1;
+      } else if (strChar === '(') {
+        start = i + 1;
+      }
+    }
+  });
   fonts.forEach(function (fontName) {
-    fontLibraryPaths.forEach(function (libraryPath) {
-      try {
-        var cmdCpy = "cp ".concat(libraryPath, "*").concat(fontName.replace(/\s/g, '\\ '), "* ").concat(path);
-        console.log(cmdCpy);
-        Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_2__["execSync"])(cmdCpy);
-        console.log(fontName + " Copied!");
-      } catch (_unused) {}
-    });
+    if (mapping[fontName] != undefined) {
+      var cmdCpy = "cp ".concat(mapping[fontName].replace(/\s/g, '\\ '), " ").concat(path);
+      console.log(cmdCpy);
+      Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_2__["execSync"])(cmdCpy);
+    }
   });
 }
 function copyImages(queuePath, fileName, doc) {
