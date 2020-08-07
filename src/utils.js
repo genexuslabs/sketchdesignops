@@ -28,7 +28,7 @@ export function isFileExist(source) {
 
 export function copyFile2(source, target) {
   const manager = NSFileManager.defaultManager()
-  if( !manager.fileExistsAtPath(source)) throw new Error(`file not exist ${source}`)
+  if (!manager.fileExistsAtPath(source)) throw new Error(`file not exist ${source}`)
   manager.copyItemAtPath_toPath_error(source, target, null)
 }
 
@@ -184,7 +184,7 @@ function getTraitsForFont(style) {
     traits |= NSItalicFontMask;
   if (style.fontVariant == 'small-caps')
     traits |= NSSmallCapsFontMask;
-  
+
   switch (style.fontStretch) {
     case 'compressed':
       traits |= NSCompressedFontMask;
@@ -206,30 +206,39 @@ function getTraitsForFont(style) {
   return traits;
 }
 
- 
 
-var traverseFonts = function (layer, fonts) {
+
+var traverseFonts = function (layer, fonts, files) {
   if (layer.type == "Text" && layer.style.fontFamily != "Helvetica") {
-    log(layer.style.fontFamily + "-" + layer.style.fontWeight);
+    //    log(layer.style.fontFamily + "-" + layer.style.fontWeight);
     var fontManager = NSFontManager.sharedFontManager();
     if (!fontManager) {
       log("NSFontManager sharedFontManager NULL !!!");
       return;
     }
     if (layer.style.fontFamily && layer.style.fontWeight && layer.style.fontSize) {
-      var nFont = fontManager.fontWithFamily_traits_weight_size(layer.style.fontFamily, getTraitsForFont(layer.style), layer.style.fontWeight, layer.style.fontSize);
+      var nFont = layer.sketchObject.font();
+      if (nFont == null)
+        nFont = fontManager.fontWithFamily_traits_weight_size(layer.style.fontFamily, getTraitsForFont(layer.style), layer.style.fontWeight, layer.style.fontSize);
       if (nFont) {
         var fontName = nFont.fontName();
-        log("FONT NAME:" + fontName);
-        var font = String(fontName);
-        if (!fonts.includes(font)) {
-          fonts.push(String(font));
+        //    log("FONT NAME:" + fontName);
+        var urlAtt = nFont.fontDescriptor().objectForKey("NSCTFontFileURLAttribute");
+        if (urlAtt && !files.includes(String(urlAtt))) {
+          //     log("FONT :" + urlAtt.path());
+          files.push(String(urlAtt.path()));
+        }
+        else {
+          var font = String(fontName);
+          if (!fonts.includes(font)) {
+            fonts.push(String(font));
+          }
         }
       } else {
         // maybe its a reference to a Variable Font, just add the familyname
         log("Font not found !! : ");
         log(layer.style.fontFamily + "-" + layer.style.fontWeight + "-" + layer.style.fontSize);
-        if (!fonts.includes(layer.style.fontFamily)) 
+        if (!fonts.includes(layer.style.fontFamily))
           fonts.push(layer.style.fontFamily);
       }
     }
@@ -239,7 +248,7 @@ var traverseFonts = function (layer, fonts) {
   }
   if (layer.layers) {
     layer.layers.forEach(l => {
-      traverseFonts(l, fonts);
+      traverseFonts(l, fonts, files);
     })
   }
 }
@@ -269,76 +278,46 @@ function getPostcriptNames(path) {
   return "";
 }
 
+function getFileName(fullPath) {
+  var startIndex = (fullPath.indexOf('\\') >= 0 ? fullPath.lastIndexOf('\\') : fullPath.lastIndexOf('/'));
+  var filename = fullPath.substring(startIndex);
+  if (filename.indexOf('\\') === 0 || filename.indexOf('/') === 0) {
+    filename = filename.substring(1);
+  }
+  return filename;
+}
+
 export function copyFonts(doc, path) {
   var fonts = [];
+  var files = [];
   doc.pages.forEach(page => {
-    //check pages if they have textlayers（by utom
     console.log("Copying Fonts for page " + page.name);
-    traverseFonts(page, fonts);
+    traverseFonts(page, fonts, files);
   });
-  console.log("Fonts to Copy: " + JSON.stringify(fonts));
-  var fontLibraryPaths = ["/Network/Library/Fonts/", "~/Library/Fonts/", "/Library/Fonts/", "/System/Library/Fonts/"];
-
-  var mapping = {};
-  fontLibraryPaths.forEach(libraryPath => {
-
-    var index = 0;
-    var files = getFiles(libraryPath);
-    var start = -1;
-    var end = -1;
-    var output = getPostcriptNames(libraryPath);
-    for (var i = 0; i < output.length; i++) {
-      var strChar = output.charAt(i);
-      if (strChar === ')') {
-        end = i;
-        var key = output.substr(start, end - start).trim().replace(/\"/g, "");
-        if (!(key in mapping)) {
-          mapping[key] = files[index];
+  if (fonts.length > 0) {
+    log("Could not found the folloowing fonts: " + fonts);
+  }
+  var embeddedFonts = {};
+  var document = getJsonDocument(doc);
+  if (document) {
+    if (document.fontReferences) {
+      for (var i in document.fontReferences) {
+        if (document.fontReferences[i].fontData) {
+          embeddedFonts[document.fontReferences[i].fontFileName] = true;
         }
-        index++;
-        start = -1;
-      }
-      else if (strChar === '(') {
-        start = i + 1;
       }
     }
   }
-  );
-
-  fonts.forEach(fontName => {
-    if (mapping[fontName] != undefined) {
-      var cmdCpy = `cp ${mapping[fontName].replace(/\s/g, '\\ ')} ${path}`
-      console.log(cmdCpy);
-      execSync(cmdCpy);
-    }
+  files.forEach(file => {
+    var fileName = getFileName(file)
+    if (fileName in embeddedFonts)
+      log("Embedded Font " + getFileName(file));
     else {
-      log("Looking in references for " + fontName)
-      // we couldn't find in the traditional way, just unzip the document and see the font references
-      var document = getJsonDocument(doc);
-      if (document) {
-        if (document.fontReferences) {
-          for (var i in document.fontReferences) {
-            if (document.fontReferences[i].fontData) {
-              log("Font is embbeded");
-              break;
-            }
-            if (String(document.fontReferences[i].fontFamilyName).localeCompare(fontName) == 0) {
-             var cmdCpy = `cp ${"~/Library/Fonts/" + String(document.fontReferences[i].fontFileName).replace(/\s/g, '\\ ')} ${path}`
-             try {
-              if (execSync(cmdCpy)) {
-                log("copied !");
-                break;
-              }
-             }
-             catch {}
-            }
-          }
-        }
-      }
+      copyFile(file, path);
     }
-  }
-  )
+  });
 }
+
 
 export function copyImages(queuePath, fileName, doc) {
   var imageFolder = queuePath + fileName.replace(".sketch", "Images");
