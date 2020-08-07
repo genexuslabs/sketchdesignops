@@ -2,8 +2,7 @@ import sketch from 'sketch';
 
 
 import { spawnSync , execSync} from '@skpm/child_process';
-import { getFileAndQueueName, getQueuePath } from './utils';
-
+import { copyFonts } from './utils';
 
 var UI = require("sketch/ui");
 var zip = require("jszip");
@@ -21,7 +20,7 @@ function getFonts() {
 }
 
 
-export default function () {
+export default function (context) {
   var queuePath = getQueuePath(queuePath);
   var fileName;
   ({ fileName, queuePath } = getFileAndQueueName(doc, queuePath));

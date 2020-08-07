@@ -4019,11 +4019,11 @@ function getFonts() {
   return fonts;
 }
 
-/* harmony default export */ __webpack_exports__["default"] = (function () {
-  var queuePath = Object(_utils__WEBPACK_IMPORTED_MODULE_2__["getQueuePath"])(queuePath);
+/* harmony default export */ __webpack_exports__["default"] = (function (context) {
+  var queuePath = getQueuePath(queuePath);
   var fileName;
 
-  var _getFileAndQueueName = Object(_utils__WEBPACK_IMPORTED_MODULE_2__["getFileAndQueueName"])(doc, queuePath);
+  var _getFileAndQueueName = getFileAndQueueName(doc, queuePath);
 
   fileName = _getFileAndQueueName.fileName;
   queuePath = _getFileAndQueueName.queuePath;
@@ -4260,6 +4260,38 @@ var exportLayer = function exportLayer(layer, path) {
   }
 };
 
+function getTraitsForFont(style) {
+  var traits = 0;
+  if (style.fontStyle == 'italic') traits |= NSItalicFontMask;
+  if (style.fontVariant == 'small-caps') traits |= NSSmallCapsFontMask;
+
+  switch (style.fontStretch) {
+    case 'compressed':
+      traits |= NSCompressedFontMask;
+      break;
+
+    case 'condensed':
+      traits |= NSCondensedFontMask;
+      break;
+
+    case 'narrow':
+      traits |= NSNarrowFontMask;
+      break;
+
+    case 'expanded':
+      traits |= NSExpandedFontMask;
+      break;
+
+    case 'poster':
+      traits |= NSPosterFontMask;
+      break;
+
+    default:
+  }
+
+  return traits;
+}
+
 var traverseFonts = function traverseFonts(layer, fonts) {
   if (layer.type == "Text" && layer.style.fontFamily != "Helvetica") {
     log(layer.style.fontFamily + "-" + layer.style.fontWeight);
@@ -4271,7 +4303,7 @@ var traverseFonts = function traverseFonts(layer, fonts) {
     }
 
     if (layer.style.fontFamily && layer.style.fontWeight && layer.style.fontSize) {
-      var nFont = fontManager.fontWithFamily_traits_weight_size(layer.style.fontFamily, 0, layer.style.fontWeight, layer.style.fontSize);
+      var nFont = fontManager.fontWithFamily_traits_weight_size(layer.style.fontFamily, getTraitsForFont(layer.style), layer.style.fontWeight, layer.style.fontSize);
 
       if (nFont) {
         var fontName = nFont.fontName();
