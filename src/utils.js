@@ -3,6 +3,48 @@ import Settings from 'sketch/settings';
 import { spawnSync, execSync } from '@skpm/child_process';
 import { SettingKeys } from './constants';
 
+export function getJsonDocument(doc) {
+  var filePath = decodeURIComponent(doc.path);
+  var fileName = decodeURIComponent(doc.path).replace(/^.*[\\\/]/, '').trim();
+  var tmpFileDocumentName = `/var/tmp/${fileName}.json`;
+  log("Reading Json Document:" + filePath);
+  const unzipCmd = `unzip -p '${filePath}' document.json > '${tmpFileDocumentName}'`;
+  log(unzipCmd);
+  var exec = execSync(unzipCmd);
+  if (exec) {
+    var contents = readFile(`/var/tmp/${fileName}.json`);
+    if (contents) {
+      removeFile(tmpFileDocumentName);
+      return JSON.parse(contents);
+    }
+  }
+  return null;
+}
+
+export function isFileExist(source) {
+  const manager = NSFileManager.defaultManager()
+  return manager.fileExistsAtPath(source)
+}
+
+export function copyFile2(source, target) {
+  const manager = NSFileManager.defaultManager()
+  if( !manager.fileExistsAtPath(source)) throw new Error(`file not exist ${source}`)
+  manager.copyItemAtPath_toPath_error(source, target, null)
+}
+
+export function writeToFile(path, content) {
+  const resultStr = NSString.stringWithFormat('%@', content)
+  resultStr.writeToFile_atomically(path, true)
+}
+
+export function removeFile(path) {
+  const manager = NSFileManager.defaultManager()
+  manager.removeItemAtPath_error(path, null)
+}
+
+function readFile(path) {
+  return NSString.stringWithContentsOfFile_encoding_error(path, NSUTF8StringEncoding, null);
+}
 
 export function getFileAndQueueName(doc, queuePath) {
   var branch = "";
@@ -87,6 +129,7 @@ export function copyFile(fromCopyFile, toCopyFile) {
     return false;
   }
   else {
+    log("Copied !")
     return true;
   }
 }
@@ -137,16 +180,32 @@ var exportLayer = function (layer, path) {
 
 var traverseFonts = function (layer, fonts) {
   if (layer.type == "Text" && layer.style.fontFamily != "Helvetica") {
-    console.log(layer.style.fontFamily + "-" + layer.style.fontWeight);
-    var fontName = NSFontManager.sharedFontManager().fontWithFamily_traits_weight_size(layer.style.fontFamily, 0, layer.style.fontWeight, layer.style.fontSize).fontName()
-    var displayName = NSFontManager.sharedFontManager().fontWithFamily_traits_weight_size(layer.style.fontFamily, 0, layer.style.fontWeight, layer.style.fontSize).displayName()
-    console.log("FONT NAME:" + fontName);
-    console.log("Display NAME:" + displayName);
-    var font = String(fontName);
-    if (!fonts.includes(font)) {
-      fonts.push(String(font));
+    log(layer.style.fontFamily + "-" + layer.style.fontWeight);
+    var fontManager = NSFontManager.sharedFontManager();
+    if (!fontManager) {
+      log("NSFontManager sharedFontManager NULL !!!");
+      return;
     }
-
+    if (layer.style.fontFamily && layer.style.fontWeight && layer.style.fontSize) {
+      var nFont = fontManager.fontWithFamily_traits_weight_size(layer.style.fontFamily, 0, layer.style.fontWeight, layer.style.fontSize);
+      if (nFont) {
+        var fontName = nFont.fontName();
+        log("FONT NAME:" + fontName);
+        var font = String(fontName);
+        if (!fonts.includes(font)) {
+          fonts.push(String(font));
+        }
+      } else {
+        // maybe its a reference to a Variable Font, just add the familyname
+        log("Font not found !! : ");
+        log(layer.style.fontFamily + "-" + layer.style.fontWeight + "-" + layer.style.fontSize);
+        if (!fonts.includes(layer.style.fontFamily)) 
+          fonts.push(layer.style.fontFamily);
+      }
+    }
+    else {
+      log("Something wrong with this font: " + layer.style.fontFamily + "-" + layer.style.fontWeight + "-" + layer.style.fontSize);
+    }
   }
   if (layer.layers) {
     layer.layers.forEach(l => {
@@ -176,7 +235,7 @@ function getPostcriptNames(path) {
     var retMetadata = execSync(fontNameCmd);
     if (retMetadata)
       return retMetadata.toString();
-  } catch {}
+  } catch { }
   return "";
 }
 
@@ -214,17 +273,40 @@ export function copyFonts(doc, path) {
       }
     }
   }
-
-
   );
 
   fonts.forEach(fontName => {
-        if (mapping[fontName] != undefined) {
-          var cmdCpy = `cp ${mapping[fontName].replace(/\s/g, '\\ ')} ${path}`
-          console.log(cmdCpy);
-          execSync(cmdCpy);
-        }
+    if (mapping[fontName] != undefined) {
+      var cmdCpy = `cp ${mapping[fontName].replace(/\s/g, '\\ ')} ${path}`
+      console.log(cmdCpy);
+      execSync(cmdCpy);
     }
+    else {
+      log("Looking in references for " + fontName)
+      // we couldn't find in the traditional way, just unzip the document and see the font references
+      var document = getJsonDocument(doc);
+      if (document) {
+        if (document.fontReferences) {
+          for (var i in document.fontReferences) {
+            if (document.fontReferences[i].fontData) {
+              log("Font is embbeded");
+              break;
+            }
+            if (String(document.fontReferences[i].fontFamilyName).localeCompare(fontName) == 0) {
+             var cmdCpy = `cp ${"~/Library/Fonts/" + String(document.fontReferences[i].fontFileName).replace(/\s/g, '\\ ')} ${path}`
+             try {
+              if (execSync(cmdCpy)) {
+                log("copied !");
+                break;
+              }
+             }
+             catch {}
+            }
+          }
+        }
+      }
+    }
+  }
   )
 }
 

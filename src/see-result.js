@@ -2,8 +2,8 @@ import sketch from 'sketch';
 
 
 import { spawnSync , execSync} from '@skpm/child_process';
-import { getFileAndQueueName, getQueuePath, copyFonts } from './utils';
-import { os } from '@skpm/os';
+import { getFileAndQueueName, getQueuePath } from './utils';
+
 
 var UI = require("sketch/ui");
 var zip = require("jszip");
