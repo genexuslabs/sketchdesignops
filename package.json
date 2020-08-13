@@ -7,7 +7,7 @@
     "sketch": ">=49.0"
   },
   "skpm": {
-    "name": "GxDesignOps",
+    "name": "GeneXus DesignOps",
     "manifest": "src/manifest.json",
     "main": "gxdesignops.sketchplugin",
     "assets": [
@@ -24,7 +24,7 @@
   "devDependencies": {
     "@skpm/builder": "^0.7.0"
   },
-  "author": "Gastón Milano <gmilano@genexus.com>",
+  "author": "GeneXus <www.genexus.com>",
   "dependencies": {
     "@skpm/child_process": "^0.4.2",
     "@skpm/dialog": "^0.4.0",

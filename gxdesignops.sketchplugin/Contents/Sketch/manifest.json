@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/sketch-hq/SketchAPI/develop/docs/sketch-plugin-manifest-schema.json",
-  "icon": "icon.png",
+  "icon": "gx.png",
   "commands": [
     {
       "name": "Send Sketch and Images ",
@@ -40,10 +40,10 @@
   },
   "version": "2.3.0",
   "description": "Sketch Plugin For GeneXus Design Ops Cycles",
-  "name": "GxDesignOps",
-  "identifier": "GxDesignOps",
+  "name": "GeneXus DesignOps",
+  "identifier": "GeneXus DesignOps",
   "disableCocoaScriptPreprocessor": true,
   "appcast": "https://raw.githubusercontent.com/genexuslabs/sketchdesignops/master/.appcast.xml",
-  "author": "Gastón Milano",
-  "authorEmail": "gmilano@genexus.com"
+  "author": "GeneXus",
+  "authorEmail": "www.genexus.com"
 }
