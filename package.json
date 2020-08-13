@@ -2,12 +2,12 @@
   "name": "gxdesignops",
   "description": "Sketch Plugin For GeneXus Design Ops Cycles",
   "repository": "https://github.com/genexuslabs/sketchdesignops.git",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "engines": {
     "sketch": ">=49.0"
   },
   "skpm": {
-    "name": "GeneXus DesignOps",
+    "name": "GeneXus npDesignOps",
     "manifest": "src/manifest.json",
     "main": "gxdesignops.sketchplugin",
     "assets": [
