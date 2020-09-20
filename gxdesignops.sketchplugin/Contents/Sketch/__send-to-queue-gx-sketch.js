@@ -955,288 +955,6 @@ module.exports = spawnSync
 
 /***/ }),
 
-/***/ "./node_modules/@skpm/promise/index.js":
-/*!*********************************************!*\
-  !*** ./node_modules/@skpm/promise/index.js ***!
-  \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-/* from https://github.com/taylorhakes/promise-polyfill */
-
-function promiseFinally(callback) {
-  var constructor = this.constructor;
-  return this.then(
-    function(value) {
-      return constructor.resolve(callback()).then(function() {
-        return value;
-      });
-    },
-    function(reason) {
-      return constructor.resolve(callback()).then(function() {
-        return constructor.reject(reason);
-      });
-    }
-  );
-}
-
-function noop() {}
-
-/**
- * @constructor
- * @param {Function} fn
- */
-function Promise(fn) {
-  if (!(this instanceof Promise))
-    throw new TypeError("Promises must be constructed via new");
-  if (typeof fn !== "function") throw new TypeError("not a function");
-  /** @type {!number} */
-  this._state = 0;
-  /** @type {!boolean} */
-  this._handled = false;
-  /** @type {Promise|undefined} */
-  this._value = undefined;
-  /** @type {!Array<!Function>} */
-  this._deferreds = [];
-
-  doResolve(fn, this);
-}
-
-function handle(self, deferred) {
-  while (self._state === 3) {
-    self = self._value;
-  }
-  if (self._state === 0) {
-    self._deferreds.push(deferred);
-    return;
-  }
-  self._handled = true;
-  Promise._immediateFn(function() {
-    var cb = self._state === 1 ? deferred.onFulfilled : deferred.onRejected;
-    if (cb === null) {
-      (self._state === 1 ? resolve : reject)(deferred.promise, self._value);
-      return;
-    }
-    var ret;
-    try {
-      ret = cb(self._value);
-    } catch (e) {
-      reject(deferred.promise, e);
-      return;
-    }
-    resolve(deferred.promise, ret);
-  });
-}
-
-function resolve(self, newValue) {
-  try {
-    // Promise Resolution Procedure: https://github.com/promises-aplus/promises-spec#the-promise-resolution-procedure
-    if (newValue === self)
-      throw new TypeError("A promise cannot be resolved with itself.");
-    if (
-      newValue &&
-      (typeof newValue === "object" || typeof newValue === "function")
-    ) {
-      var then = newValue.then;
-      if (newValue instanceof Promise) {
-        self._state = 3;
-        self._value = newValue;
-        finale(self);
-        return;
-      } else if (typeof then === "function") {
-        doResolve(then.bind(newValue), self);
-        return;
-      }
-    }
-    self._state = 1;
-    self._value = newValue;
-    finale(self);
-  } catch (e) {
-    reject(self, e);
-  }
-}
-
-function reject(self, newValue) {
-  self._state = 2;
-  self._value = newValue;
-  finale(self);
-}
-
-function finale(self) {
-  if (self._state === 2 && self._deferreds.length === 0) {
-    Promise._immediateFn(function() {
-      if (!self._handled) {
-        Promise._unhandledRejectionFn(self._value, self);
-      }
-    });
-  }
-
-  for (var i = 0, len = self._deferreds.length; i < len; i++) {
-    handle(self, self._deferreds[i]);
-  }
-  self._deferreds = null;
-}
-
-/**
- * @constructor
- */
-function Handler(onFulfilled, onRejected, promise) {
-  this.onFulfilled = typeof onFulfilled === "function" ? onFulfilled : null;
-  this.onRejected = typeof onRejected === "function" ? onRejected : null;
-  this.promise = promise;
-}
-
-/**
- * Take a potentially misbehaving resolver function and make sure
- * onFulfilled and onRejected are only called once.
- *
- * Makes no guarantees about asynchrony.
- */
-function doResolve(fn, self) {
-  var done = false;
-  try {
-    fn(
-      function(value) {
-        if (done) {
-          Promise._multipleResolvesFn("resolve", self, value);
-          return;
-        }
-        done = true;
-        resolve(self, value);
-      },
-      function(reason) {
-        if (done) {
-          Promise._multipleResolvesFn("reject", self, reason);
-          return;
-        }
-        done = true;
-        reject(self, reason);
-      }
-    );
-  } catch (ex) {
-    if (done) {
-      Promise._multipleResolvesFn("reject", self, ex);
-      return;
-    }
-    done = true;
-    reject(self, ex);
-  }
-}
-
-Promise.prototype["catch"] = function(onRejected) {
-  return this.then(null, onRejected);
-};
-
-Promise.prototype.then = function(onFulfilled, onRejected) {
-  // @ts-ignore
-  var prom = new this.constructor(noop);
-
-  handle(this, new Handler(onFulfilled, onRejected, prom));
-  return prom;
-};
-
-Promise.prototype["finally"] = promiseFinally;
-
-Promise.all = function(arr) {
-  return new Promise(function(resolve, reject) {
-    if (!Array.isArray(arr)) {
-      return reject(new TypeError("Promise.all accepts an array"));
-    }
-
-    var args = Array.prototype.slice.call(arr);
-    if (args.length === 0) return resolve([]);
-    var remaining = args.length;
-
-    function res(i, val) {
-      try {
-        if (val && (typeof val === "object" || typeof val === "function")) {
-          var then = val.then;
-          if (typeof then === "function") {
-            then.call(
-              val,
-              function(val) {
-                res(i, val);
-              },
-              reject
-            );
-            return;
-          }
-        }
-        args[i] = val;
-        if (--remaining === 0) {
-          resolve(args);
-        }
-      } catch (ex) {
-        reject(ex);
-      }
-    }
-
-    for (var i = 0; i < args.length; i++) {
-      res(i, args[i]);
-    }
-  });
-};
-
-Promise.resolve = function(value) {
-  if (value && typeof value === "object" && value.constructor === Promise) {
-    return value;
-  }
-
-  return new Promise(function(resolve) {
-    resolve(value);
-  });
-};
-
-Promise.reject = function(value) {
-  return new Promise(function(resolve, reject) {
-    reject(value);
-  });
-};
-
-Promise.race = function(arr) {
-  return new Promise(function(resolve, reject) {
-    if (!Array.isArray(arr)) {
-      return reject(new TypeError("Promise.race accepts an array"));
-    }
-
-    for (var i = 0, len = arr.length; i < len; i++) {
-      Promise.resolve(arr[i]).then(resolve, reject);
-    }
-  });
-};
-
-// Use polyfill for setImmediate for performance gains
-Promise._immediateFn = setImmediate;
-
-Promise._unhandledRejectionFn = function _unhandledRejectionFn(err, promise) {
-  if (
-    typeof process !== "undefined" &&
-    process.listenerCount &&
-    (process.listenerCount("unhandledRejection") ||
-      process.listenerCount("uncaughtException"))
-  ) {
-    process.emit("unhandledRejection", err, promise);
-    process.emit("uncaughtException", err, "unhandledRejection");
-  } else if (typeof console !== "undefined" && console) {
-    console.warn("Possible Unhandled Promise Rejection:", err);
-  }
-};
-
-Promise._multipleResolvesFn = function _multipleResolvesFn(
-  type,
-  promise,
-  value
-) {
-  if (typeof process !== "undefined" && process.emit) {
-    process.emit("multipleResolves", type, promise, value);
-  }
-};
-
-module.exports = Promise;
-
-
-/***/ }),
-
 /***/ "./node_modules/webpack/buildin/module.js":
 /*!***********************************!*\
   !*** (webpack)/buildin/module.js ***!
@@ -3970,7 +3688,7 @@ var SettingKeys = {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* WEBPACK VAR INJECTION */(function(Promise) {/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "copyGxSketch", function() { return copyGxSketch; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "copyGxSketch", function() { return copyGxSketch; });
 /* harmony import */ var sketch__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! sketch */ "sketch");
 /* harmony import */ var sketch__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(sketch__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./utils */ "./src/utils.js");
@@ -3984,19 +3702,26 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-/* harmony default export */ __webpack_exports__["default"] = (function () {
-  var doc = sketch__WEBPACK_IMPORTED_MODULE_0___default.a.getSelectedDocument();
-  var queuePath = Object(_utils__WEBPACK_IMPORTED_MODULE_1__["getQueuePath"])();
 
-  var fiber = __webpack_require__(/*! sketch/async */ "sketch/async").createFiber(); // after completion, tell the fiber we're done
+function runCommand() {
+  Object(_utils__WEBPACK_IMPORTED_MODULE_1__["attachToConsole"])(); //  try
 
+  {
+    var doc = sketch__WEBPACK_IMPORTED_MODULE_0___default.a.getSelectedDocument();
+    var queuePath = Object(_utils__WEBPACK_IMPORTED_MODULE_1__["getQueuePath"])();
+    if (queuePath) if (!copyGxSketch(queuePath, doc, true)) Object(_utils__WEBPACK_IMPORTED_MODULE_1__["showOperationMessage"])("😔 Some error occurs, see console for further details", _utils__WEBPACK_IMPORTED_MODULE_1__["output"]);
+  } // catch (e)
+  // {
+  //  showOperationMessage("Error", "Something goes wrong", true);
+  // }
+}
 
-  if (queuePath) return new Promise(function (resolve) {
-    copyGxSketch(queuePath, doc, true);
-    fiber.cleanup();
-  });
+/* harmony default export */ __webpack_exports__["default"] = (function (context) {
+  Object(_utils__WEBPACK_IMPORTED_MODULE_1__["runOnBackground"])(runCommand, "Create & Copy GeneXus Sketch file", "Press the 'Copy' button to create a gxsketch file and then copy it to the queue", "Copy");
 });
 function copyGxSketch(queuePath, doc, images) {
+  Object(_utils__WEBPACK_IMPORTED_MODULE_1__["startOperationContext"])("Copy Gx Sketch format", 10);
+  Object(_utils__WEBPACK_IMPORTED_MODULE_1__["step"])("Reading Settings");
   var enableS3 = sketch_settings__WEBPACK_IMPORTED_MODULE_3___default.a.settingForKey(_constants__WEBPACK_IMPORTED_MODULE_4__["SettingKeys"].ENABLE_S3) == 1;
   var s3Bucket = sketch_settings__WEBPACK_IMPORTED_MODULE_3___default.a.settingForKey(_constants__WEBPACK_IMPORTED_MODULE_4__["SettingKeys"].S3_BUCKET);
   var s3SecretKey = sketch_settings__WEBPACK_IMPORTED_MODULE_3___default.a.settingForKey(_constants__WEBPACK_IMPORTED_MODULE_4__["SettingKeys"].S3_SECRET_KEY);
@@ -4014,48 +3739,652 @@ function copyGxSketch(queuePath, doc, images) {
     queuePath = "/var/TMP";
   }
 
-  console.log("copy to queue:" + queuePath);
+  Object(_utils__WEBPACK_IMPORTED_MODULE_1__["step"])("copy to queue:" + queuePath);
 
   if (queuePath.localeCompare(path) != 0) {
-    Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_2__["spawnSync"])('mkdir', ["-p", queuePath + "/gx/"], {
+    var spawn = Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_2__["spawnSync"])('mkdir', ["-p", queuePath + "/gx/"], {
       shell: true
     });
+
+    if (spawn.status > 0) {
+      console.log(Error(spawn.stderr));
+      return false;
+    }
   }
 
-  if (images) Object(_utils__WEBPACK_IMPORTED_MODULE_1__["copyImages"])(queuePath + "/gx/", fileName, doc);
+  Object(_utils__WEBPACK_IMPORTED_MODULE_1__["step"])("Copy Images");
+
+  if (images) {
+    Object(_utils__WEBPACK_IMPORTED_MODULE_1__["copyImages"])(queuePath + "/gx/", fileName, doc);
+  }
+
+  Object(_utils__WEBPACK_IMPORTED_MODULE_1__["step"])("Copy Sketch File");
   var fromCopyFile = decodeURIComponent(doc.path);
   var toCopyFile = queuePath + "/gx/" + fileName;
   var ret = Object(_utils__WEBPACK_IMPORTED_MODULE_1__["copyFile"])(fromCopyFile, toCopyFile);
-  Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_2__["spawnSync"])('mkdir', ["-p", queuePath + "/gx/fonts"], {
+  if (!ret) return false;
+  Object(_utils__WEBPACK_IMPORTED_MODULE_1__["step"])("Copy Fonts");
+  var spawn = Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_2__["spawnSync"])('mkdir', ["-p", queuePath + "/gx/fonts"], {
     shell: true
   });
+
+  if (spawn.status > 0) {
+    console.log(Error(spawn.stderr));
+    return false;
+  }
+
   if (enableFonts) Object(_utils__WEBPACK_IMPORTED_MODULE_1__["copyFonts"])(doc, queuePath + "/gx/fonts");
 
   if (!ret) {
-    sketch__WEBPACK_IMPORTED_MODULE_0___default.a.UI.message("😔 Some error occurs, see console for further details");
+    sketch__WEBPACK_IMPORTED_MODULE_0___default.a.UI.alert("GeneXus", "😔 Some error occurs, see console for further details");
   } else {
+    Object(_utils__WEBPACK_IMPORTED_MODULE_1__["step"])("Creating Gx Sketch File");
     fileName = fileName.replace(".sketch", ".gxsketch");
     toCopyFile = queuePath + "/" + fileName;
     console.log("File To Copy:" + toCopyFile);
-    Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_2__["execSync"])("pushd " + queuePath + " && zip -r '" + toCopyFile + "' " + "gx " + "&& popd " + queuePath, {
+    var commandLine = "pushd '" + queuePath + "' && zip -r '" + toCopyFile + "' " + "gx " + "&& popd '" + queuePath + "'";
+    console.log(commandLine);
+    var exec = Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_2__["execSync"])(commandLine, {
       shell: true
     });
-    Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_2__["spawnSync"])('rm', ["-rf", queuePath + "/gx/"], {
+    if (!exec) return false;
+    spawn = Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_2__["spawnSync"])('rm', ["-rf", "'" + queuePath + "/gx/'"], {
       shell: true
     });
 
+    if (spawn.status > 0) {
+      console.log(Error(spawn.stderr));
+      return false;
+    }
+
     if (enableS3) {
+      Object(_utils__WEBPACK_IMPORTED_MODULE_1__["step"])("Uploading to S3");
       console.log("uploading " + toCopyFile);
       console.log("fileName " + fileName);
       var errors = [];
-      if (Object(_utils__WEBPACK_IMPORTED_MODULE_1__["uploadToS3"])(fileName, toCopyFile, s3Bucket, s3SecretKey, s3AccessKey, errors)) sketch__WEBPACK_IMPORTED_MODULE_0___default.a.UI.message("Copied to Design Ops Queue ! 💚");else {
+
+      if (Object(_utils__WEBPACK_IMPORTED_MODULE_1__["uploadToS3"])(fileName, toCopyFile, s3Bucket, s3SecretKey, s3AccessKey, errors)) {
+        sketch__WEBPACK_IMPORTED_MODULE_0___default.a.UI.alert("GeneXus", "Copied to Design Ops Queue ! 💚");
+        return true;
+      } else {
         sketch__WEBPACK_IMPORTED_MODULE_0___default.a.UI.alert("Upload to S3 failed 😔😔😔😔😔😔", JSON.stringify(errors));
-        sketch__WEBPACK_IMPORTED_MODULE_0___default.a.UI.message("😔😔😔😔😔😔 See log for more information 💚");
+        return false;
       }
+    } else {
+      sketch__WEBPACK_IMPORTED_MODULE_0___default.a.UI.alert("GeneXus", "Copied to Design Ops Queue ! 💚");
+      return true;
     }
   }
 }
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./node_modules/@skpm/promise/index.js */ "./node_modules/@skpm/promise/index.js")))
+
+/***/ }),
+
+/***/ "./src/uidialog.js":
+/*!*************************!*\
+  !*** ./src/uidialog.js ***!
+  \*************************/
+/*! exports provided: UIDialog */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "UIDialog", function() { return UIDialog; });
+function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
+function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
+
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
+
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
+function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it.return != null) it.return(); } finally { if (didErr) throw err; } } }; }
+
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+var UIDialog_iconImage = null;
+var TAB_HEIGHT = 55;
+
+function Class(className, BaseClass, selectorHandlerDict) {
+  var uniqueClassName = className + NSUUID.UUID().UUIDString();
+  var delegateClassDesc = MOClassDescription.allocateDescriptionForClassWithName_superclass_(uniqueClassName, BaseClass);
+
+  for (var selectorString in selectorHandlerDict) {
+    delegateClassDesc.addInstanceMethodWithSelector_function_(selectorString, selectorHandlerDict[selectorString]);
+  }
+
+  delegateClassDesc.registerClass();
+  return NSClassFromString(uniqueClassName);
+}
+
+;
+
+var UIAbstractWindow = /*#__PURE__*/function () {
+  function UIAbstractWindow(window, intRect) {
+    _classCallCheck(this, UIAbstractWindow);
+
+    this.window = window;
+    this.buttonOK = null;
+    var container = NSView.alloc().initWithFrame(intRect);
+    this.container = container;
+    this.topContainer = container;
+    this.views = [];
+    this.leftOffset = 0;
+    this.rect = intRect;
+    this.y = NSHeight(this.rect);
+    this.leftColumn = true;
+    this.leftColWidth = 120;
+    this.textOffset = 2;
+  }
+
+  _createClass(UIAbstractWindow, [{
+    key: "removeLeftColumn",
+    value: function removeLeftColumn() {
+      this.leftColumn = false;
+      this.leftColWidth = 0;
+      this.textOffset = 0;
+    }
+  }, {
+    key: "copyRect",
+    value: function copyRect(rect) {
+      return NSMakeRect(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height);
+    }
+  }, {
+    key: "initTabs",
+    value: function initTabs(tabs) {
+      var intRect = this.rect;
+      this.tabs = tabs.map(function (tab) {
+        return {
+          label: tab
+        };
+      });
+      var tabView = NSTabView.alloc().initWithFrame(intRect);
+      this.tabs.forEach(function (tab, index) {
+        var viewController = NSViewController.alloc().init();
+        viewController.originalSize = intRect;
+        var view = NSView.alloc().initWithFrame(intRect);
+        view.wantsLayer = false;
+        viewController.view = view;
+        var tabViewIem = NSTabViewItem.alloc().init();
+        tabViewIem.viewController = viewController;
+        tabViewIem.label = tab.label;
+        tabViewIem.initialFirstResponder = view;
+        tabView.addTabViewItem(tabViewIem);
+        tab.container = view;
+      }, this);
+      this.tabView = tabView;
+      this.container = this.tabs[0].container;
+      this.topContainer = tabView;
+      this.leftOffset = 20;
+      this.y = NSHeight(this.rect) - TAB_HEIGHT;
+    }
+  }, {
+    key: "setTabForViewsCreating",
+    value: function setTabForViewsCreating(tabIndex) {
+      this.container = this.tabs[tabIndex].container;
+      this.y = NSHeight(this.rect) - TAB_HEIGHT;
+    }
+  }, {
+    key: "enableTextByID",
+    value: function enableTextByID(id, enabled) {
+      if (!(id in dialog.views)) return;
+      var text = dialog.views[id];
+      if (!enabled) text.textColor = NSColor.disabledControlTextColor();else text.textColor = NSColor.controlTextColor();
+    }
+  }, {
+    key: "enableHintByID",
+    value: function enableHintByID(id, enabled) {
+      if (!(id in dialog.views)) return;
+      var text = dialog.views[id];
+      if (!enabled) text.textColor = NSColor.disabledControlTextColor();else text.textColor = NSColor.secondaryLabelColor();
+    }
+  }, {
+    key: "enableControlByID",
+    value: function enableControlByID(id, enabled) {
+      var control = dialog.views[id];
+      control.enabled = enabled;
+      this.enableTextByID(id + 'Label', enabled);
+      this.enableHintByID(id + 'Hint', enabled);
+    }
+  }, {
+    key: "getNewFrame",
+    value: function getNewFrame() {
+      var height = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 25;
+      var width = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : -1;
+      var yinc = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : -1;
+      var frame = NSMakeRect(this.leftColWidth, this.y - height, width == -1 ? NSWidth(this.rect) - 10 - this.leftColWidth : width, height);
+      this.y -= height + (yinc >= 0 ? yinc : 10);
+      return frame;
+    }
+  }, {
+    key: "addSpace",
+    value: function addSpace() {
+      this.getNewFrame(0);
+    }
+  }, {
+    key: "addFullLabel",
+    value: function addFullLabel(id, text) {
+      var height = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 40;
+      var frame = null;
+      frame = NSMakeRect(0, this.y - height - this.textOffset, 800, height);
+      var scrollView = NSScrollView.alloc().initWithFrame(frame);
+      scrollView.hasVerticalScroller = true;
+      scrollView.hasHorizontalScroller = true;
+      scrollView.drawsBackground = false;
+      scrollView.drawsBackground = false;
+      var label = NSTextView.alloc().initWithFrame(frame);
+      label.setString(text);
+      label.setDrawsBackground(false);
+      label.setEditable(false);
+      label.setSelectable(true);
+      if ('' != id) this.views[id] = label;
+      scrollView.addSubview(label);
+      this.container.addSubview(scrollView);
+      scrollView.documentView = label;
+      return label;
+    }
+  }, {
+    key: "addLeftLabel",
+    value: function addLeftLabel(id, text) {
+      var height = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 40;
+      var frame = null;
+      if (this.leftColumn) frame = NSMakeRect(0, this.y - height - this.textOffset, this.leftColWidth - 10, height);else frame = this.getNewFrame(height);
+      var label = NSTextField.alloc().initWithFrame(frame);
+      label.setStringValue(text);
+      label.setBezeled(false);
+      label.setDrawsBackground(false);
+      label.setEditable(false);
+      label.setSelectable(false);
+
+      if (this.leftColumn) {
+        label.setFont(NSFont.boldSystemFontOfSize(12));
+        label.setAlignment(NSTextAlignmentRight);
+      }
+
+      if ('' != id) this.views[id] = label;
+      this.container.addSubview(label);
+      return label;
+    }
+  }, {
+    key: "addLabel",
+    value: function addLabel(id, text) {
+      var height = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 25;
+      var frame = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : undefined;
+      var myframe = frame ? this.copyRect(frame) : undefined;
+      if (myframe) myframe.size.height = height;
+      var label = NSTextField.alloc().initWithFrame(myframe ? myframe : this.getNewFrame(height));
+      label.setStringValue(text);
+      label.setBezeled(false);
+      label.setDrawsBackground(false);
+      label.setEditable(false);
+      label.setSelectable(false);
+      if ('' != id) this.views[id] = label;
+      this.container.addSubview(label);
+      this.y += 5;
+      return label;
+    } // required:  id:, options:
+    // opional:  label: "", width: 220, frame: undefined
+
+  }, {
+    key: "addComboBox",
+    value: function addComboBox(opt) {
+      if (undefined == opt.label) opt.label = "";
+      if (undefined == opt.width) opt.width = 220;
+      if (opt.label != '') this.addLabel(id + "Label", opt.label, 17);
+      var v = NSComboBox.alloc().initWithFrame(opt.frame ? opt.frame : this.getNewFrame(20, opt.width));
+
+      if (opt.options.length > 0) {
+        v.addItemsWithObjectValues(opt.options);
+        v.setNumberOfVisibleItems(opt.options.length);
+        v.selectItemAtIndex(0);
+      }
+
+      v.setCompletes(1);
+      this.container.addSubview(v);
+      this.views[opt.id] = v;
+      return v;
+    }
+  }, {
+    key: "addCheckbox",
+    value: function addCheckbox(id, label, checked, func) {
+      var height = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 18;
+      checked = checked == false ? NSOffState : NSOnState;
+      var checkbox = NSButton.alloc().initWithFrame(this.getNewFrame(height, -1, 6));
+      checkbox.setButtonType(NSSwitchButton);
+      checkbox.setBezelStyle(0);
+      checkbox.setTitle(label);
+      checkbox.setState(checked);
+      checkbox.setCOSJSTargetFunction(func);
+      this.container.addSubview(checkbox);
+      this.views[id] = checkbox;
+      return checkbox;
+    }
+  }, {
+    key: "addTextBox",
+    value: function addTextBox(id, label, textValue) {
+      var inlineHint = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : "";
+      var height = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 120;
+      if (label != '') this.addLabel(id + "Label", label, 17);
+      var textBox = NSTextField.alloc().initWithFrame(this.getNewFrame(height));
+      textBox.setEditable(true);
+      textBox.setBordered(true);
+      textBox.setStringValue(textValue);
+
+      if (inlineHint != "") {
+        textBox.setPlaceholderString(inlineHint);
+      }
+
+      this.container.addSubview(textBox);
+      this.views[id] = textBox;
+      return textBox;
+    }
+  }, {
+    key: "addTextViewBox",
+    value: function addTextViewBox(id, label, textValue) {
+      var height = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 120;
+      if (label != '') this.addLabel(id + "Label", label, 17);
+      var frame = this.getNewFrame(height);
+      var scrollView = NSScrollView.alloc().initWithFrame(frame);
+      scrollView.setHasVerticalScroller(true);
+      scrollView.setHasHorizontalScroller(true);
+      var textView = NSTextView.alloc().initWithFrame(frame);
+      textView.setEditable(false);
+      textView.setString(textValue + "");
+      scrollView.addSubview(textView);
+      scrollView.setDocumentView(textView);
+      this.container.addSubview(scrollView);
+      this.views[id] = textView;
+      return textView;
+    }
+  }, {
+    key: "addTextInput",
+    value: function addTextInput(id, label, textValue) {
+      var inlineHint = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : "";
+      var width = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 220;
+      var frame = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : undefined;
+      if (label != '') this.addLabel(id + "Label", label, 17, frame);
+      var input = NSTextField.alloc().initWithFrame(frame ? frame : this.getNewFrame(20, width));
+      input.setEditable(true);
+      input.setBordered(true);
+      input.setStringValue(textValue + "");
+
+      if (inlineHint != "") {
+        input.setPlaceholderString(inlineHint);
+      }
+
+      this.container.addSubview(input);
+      this.views[id] = input;
+      return input;
+    } // opt: required: id, label, labelSelect, textValue
+    //      optional: inlineHint = "", width = 220, widthSelect = 50), askFilePath=false
+    //       comboBoxOptions: string array
+
+  }, {
+    key: "addPathInput",
+    value: function addPathInput(opt) {
+      if (!('width' in opt)) opt.width = 220;
+      if (!('widthSelect' in opt)) opt.widthSelect = 50;
+      if (!('inlineHint' in opt)) opt.inlineHint = "";
+      if (!('askFilePath' in opt)) opt.askFilePath = false;
+      if (opt.label != '') this.addLabel(opt.id + "Label", opt.label, 17);
+      var frame = this.getNewFrame(28, opt.width - opt.widthSelect - 5);
+      var frame2 = copyRect(frame);
+      frame2.origin.x = frame2.origin.x + opt.width - opt.widthSelect;
+      frame2.origin.y -= 3;
+      var input = 'comboBoxOptions' in opt ? this.addComboBox({
+        id: opt.id,
+        options: opt.comboBoxOptions,
+        width: 0,
+        frame: frame
+      }) : this.addTextInput(opt.id, "", opt.textValue, opt.inlineHint, 0, frame);
+      this.addButton(opt.id + "Select", opt.labelSelect, function () {
+        var newPath = opt.askFilePath ? Utils.askFilePath(input.stringValue() + "") : Utils.askPath(input.stringValue() + "");
+
+        if (newPath != null) {
+          input.setStringValue(newPath);
+        }
+
+        return;
+      }, 0, frame2);
+      return input;
+    }
+  }, {
+    key: "addSelect",
+    value: function addSelect(id, label, selectItem, options) {
+      var width = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 100;
+      if (label != '') this.addLabel(id + "Label", label, 15);
+      var v = NSPopUpButton.alloc().initWithFrame(this.getNewFrame(23, width));
+      v.addItemsWithTitles(options);
+      v.selectItemAtIndex(selectItem);
+      this.container.addSubview(v);
+      this.views[id] = v;
+      return v;
+    }
+  }, {
+    key: "addRadioButtons",
+    value: function addRadioButtons(id, label, selectItem, options) {
+      var width = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 100;
+      if (label != '') this.addLabel(id + "Label", label, 15); // pre-select the first item
+
+      if (selectItem < 0) selectItem = 0;
+      var group = this.startRadioButtions(id, selectItem);
+
+      var _iterator = _createForOfIteratorHelper(options),
+          _step;
+
+      try {
+        for (_iterator.s(); !(_step = _iterator.n()).done;) {
+          var item = _step.value;
+          var index = group.btns.length;
+          var btn = NSButton.alloc().initWithFrame(this.getNewFrame(18, width));
+          btn.setButtonType(NSRadioButton);
+          btn.setTitle(item);
+          btn.setState(index != selectItem ? NSOffState : NSOnState);
+          btn.myGroup = group;
+          btn.myIndex = index;
+          btn.setCOSJSTargetFunction(group.radioTargetFunction);
+          this.container.addSubview(btn);
+          group.btns.push(btn);
+        }
+      } catch (err) {
+        _iterator.e(err);
+      } finally {
+        _iterator.f();
+      }
+
+      return group;
+    }
+  }, {
+    key: "startRadioButtions",
+    value: function startRadioButtions(idGroup, selectedIndex) {
+      var groups = {
+        id: idGroup,
+        btns: [],
+        selectedIndex: selectedIndex,
+        radioTargetFunction: function radioTargetFunction(sender) {
+          sender.myGroup.selectedIndex = sender.myIndex;
+        }
+      };
+      this._buttonsGroups = groups;
+      this.views[idGroup] = this._buttonsGroups;
+      return this._buttonsGroups;
+    }
+  }, {
+    key: "addRadioButton",
+    value: function addRadioButton(id, title, index, frame) {
+      var selected = this._buttonsGroups.selectedIndex == index;
+      var btn = NSButton.alloc().initWithFrame(frame);
+      btn.setButtonType(NSRadioButton);
+      if (title != '') btn.setTitle(title);
+      btn.setState(!selected ? NSOffState : NSOnState);
+      btn.myGroup = this._buttonsGroups;
+      btn.myIndex = index;
+      btn.setCOSJSTargetFunction(this._buttonsGroups.radioTargetFunction);
+      this.views[id] = btn;
+      this.container.addSubview(btn);
+
+      this._buttonsGroups.btns.push(btn);
+
+      return btn;
+    }
+  }, {
+    key: "addButton",
+    value: function addButton(id, label, func) {
+      var width = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 100;
+      var frame = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : undefined;
+      // create OK button
+      var btn = NSButton.alloc().initWithFrame(frame ? frame : this.getNewFrame(20, width));
+      btn.setTitle(label);
+      btn.setBezelStyle(NSRoundedBezelStyle);
+      btn.sizeToFit();
+      btn.setCOSJSTargetFunction(func);
+      this.container.addSubview(btn);
+      this.views[id] = btn;
+      return btn;
+    }
+  }, {
+    key: "addHint",
+    value: function addHint(id, label) {
+      var height = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 23;
+      this.y += 3;
+      var hint = NSTextField.alloc().initWithFrame(this.getNewFrame(height, -1, 3));
+      hint.setStringValue(label);
+      hint.setColor = NSColor.secondaryLabelColor();
+      hint.setBezeled(false);
+      hint.setDrawsBackground(false);
+      hint.setEditable(false);
+      hint.setSelectable(false);
+      hint.setFont(NSFont.systemFontOfSize(10));
+      this.container.addSubview(hint);
+      if ('' != id) this.views[id] = hint;
+      return hint;
+    }
+  }, {
+    key: "addDivider",
+    value: function addDivider() {
+      var height = 1;
+      var frame = NSMakeRect(0, this.y - height, NSWidth(this.rect) - 10, height);
+      this.y -= height + 10;
+      var divider = NSView.alloc().initWithFrame(frame);
+      divider.setWantsLayer(1);
+      divider.layer().setBackgroundColor(CGColorCreateGenericRGB(204 / 255, 204 / 255, 204 / 255, 1));
+      this.container.addSubview(divider);
+      return divider;
+    } // image: NSImage
+
+  }, {
+    key: "addImage",
+    value: function addImage(id, image, frame) {
+      var nImageView = NSImageView.alloc().initWithFrame(frame);
+      nImageView.setImage(image);
+      this.container.addSubview(nImageView);
+      this.views[id] = nImageView;
+      return nImageView;
+    }
+  }, {
+    key: "addProgress",
+    value: function addProgress(indeterminate) {
+      var _this = this;
+
+      var min = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+      var max = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 100;
+      var frame = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : undefined;
+      return function (frame) {
+        var frame = NSMakeRect(10, _this.y - 40, NSWidth(_this.rect) - 10, 40);
+        _this.y -= 40;
+        var bar = NSProgressIndicator.alloc().initWithFrame(frame);
+        bar.setStyle(0);
+        bar.setBezeled(true);
+        bar.setMinValue(min);
+        bar.setMaxValue(max);
+        bar.setDoubleValue(0);
+        bar.setIndeterminate(indeterminate);
+
+        _this.container.addSubview(bar);
+
+        return bar;
+      }(frame);
+    }
+  }, {
+    key: "finish",
+    value: function finish() {
+      this.window = null;
+    }
+  }]);
+
+  return UIAbstractWindow;
+}();
+
+var UIDialog = /*#__PURE__*/function (_UIAbstractWindow) {
+  _inherits(UIDialog, _UIAbstractWindow);
+
+  var _super = _createSuper(UIDialog);
+
+  _createClass(UIDialog, null, [{
+    key: "setUp",
+    value: function setUp(context) {
+      UIDialog_iconImage = NSImage.alloc().initByReferencingFile(context.plugin.urlForResourceNamed("gx.png").path());
+    }
+  }]);
+
+  function UIDialog(title, rect, okButtonTitle) {
+    var _this2;
+
+    var description = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : '';
+    var cancelButtonTitle = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : "Cancel";
+    var thirdButtonTitle = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : undefined;
+
+    _classCallCheck(this, UIDialog);
+
+    var window = NSAlert.alloc().init();
+    window.setIcon(UIDialog_iconImage);
+    window.setMessageText(title);
+
+    if (description != '') {
+      window.setInformativeText(description);
+    }
+
+    _this2 = _super.call(this, window, rect);
+    if (okButtonTitle) _this2.buttonOK = window.addButtonWithTitle(okButtonTitle);
+    if (cancelButtonTitle) window.addButtonWithTitle(cancelButtonTitle);
+    if (thirdButtonTitle) window.addButtonWithTitle(thirdButtonTitle);
+    return _this2;
+  }
+
+  _createClass(UIDialog, [{
+    key: "setAction",
+    value: function setAction(func) {
+      this.buttonOK.setCOSJSTargetFunction(func);
+    }
+  }, {
+    key: "run",
+    value: function run() {
+      this.window.setAccessoryView(this.topContainer);
+      var res = this.window.runModal();
+      this.userClickedOk = res == '1000';
+      this.userClickedCancel = res == '1001';
+      this.userClickedThird = res == '1002';
+      return this.userClickedOk;
+    }
+  }]);
+
+  return UIDialog;
+}(UIAbstractWindow);
 
 /***/ }),
 
@@ -4063,12 +4392,21 @@ function copyGxSketch(queuePath, doc, images) {
 /*!**********************!*\
   !*** ./src/utils.js ***!
   \**********************/
-/*! exports provided: getJsonDocument, isFileExist, copyFile2, writeToFile, removeFile, getFileAndQueueName, uploadToS3, copyFile, generateArtboardImages, copyFonts, copyImages, getQueuePath, askQueuePath */
+/*! exports provided: getJsonDocument, output, currentGroup, feedbackContext, startOperationContext, step, runOnBackground, attachToConsole, Delegate, showOperationMessage, isFileExist, copyFile2, writeToFile, removeFile, getFileAndQueueName, uploadToS3, copyFile, generateArtboardImages, copyFonts, copyImages, getQueuePath, askQueuePath */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getJsonDocument", function() { return getJsonDocument; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "output", function() { return output; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "currentGroup", function() { return currentGroup; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "feedbackContext", function() { return feedbackContext; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "startOperationContext", function() { return startOperationContext; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "step", function() { return step; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "runOnBackground", function() { return runOnBackground; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "attachToConsole", function() { return attachToConsole; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "Delegate", function() { return Delegate; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "showOperationMessage", function() { return showOperationMessage; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "isFileExist", function() { return isFileExist; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "copyFile2", function() { return copyFile2; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "writeToFile", function() { return writeToFile; });
@@ -4087,7 +4425,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var sketch_settings__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(sketch_settings__WEBPACK_IMPORTED_MODULE_1__);
 /* harmony import */ var _skpm_child_process__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @skpm/child_process */ "./node_modules/@skpm/child_process/index.js");
 /* harmony import */ var _skpm_child_process__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_skpm_child_process__WEBPACK_IMPORTED_MODULE_2__);
-/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./constants */ "./src/constants.js");
+/* harmony import */ var _uidialog__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./uidialog */ "./src/uidialog.js");
+/* harmony import */ var _constants__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./constants */ "./src/constants.js");
+
 
 
 
@@ -4111,6 +4451,158 @@ function getJsonDocument(doc) {
   }
 
   return null;
+}
+var output = "";
+var currentGroup = "";
+var feedbackContext = {
+  actionName: "empty",
+  totalSteps: 0,
+  currentStep: 0,
+  currentStepName: "empty"
+};
+function startOperationContext(actionName, totalSteps) {
+  feedbackContext.actionName = actionName;
+  feedbackContext.totalSteps = totalSteps;
+  feedbackContext.currentStep = 0;
+  feedbackContext.currentStepName = "";
+}
+function step(stepName) {
+  feedbackContext.currentStep += 1;
+  feedbackContext.currentStepName = stepName;
+  console.log("STEP: " + stepName);
+}
+function runOnBackground(runCommand, title, description, actionName) {
+  _uidialog__WEBPACK_IMPORTED_MODULE_3__["UIDialog"].setUp(context);
+  var dialog = new _uidialog__WEBPACK_IMPORTED_MODULE_3__["UIDialog"](title, NSMakeRect(0, 0, 400, 180), actionName, description, "Close");
+  var step = 1;
+  var prc = new Delegate({
+    'next:': function next() {
+      if (!(step in steps)) {
+        lbl.setString(output);
+        return;
+      }
+
+      steps[step]();
+      step++;
+    }
+  });
+  var timer;
+  var steps = {
+    1: function _() {
+      progress.setHidden(false);
+      progress.startAnimation(nil);
+      lbl.setString(output);
+    },
+    2: function _() {
+      lbl.setString(output);
+    },
+    3: function _() {
+      runCommand();
+      lbl.setString(output);
+    },
+    4: function _() {
+      timer.invalidate();
+      progress.stopAnimation(null);
+      lbl.setString(output);
+    }
+  };
+
+  var onExport = function onExport(sender) {
+    step = 1;
+    attachToConsole();
+    timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats(0.1, prc.getInstance(), 'next:', nil, true);
+    NSRunLoop.currentRunLoop().addTimer_forMode(timer, NSModalPanelRunLoopMode);
+  };
+
+  dialog.setAction(onExport);
+  var progress = dialog.addProgress(true, 0, 10);
+  progress.setHidden(true);
+  var lbl = dialog.addFullLabel("out", "", 100); // Run event loop
+
+  while (true) {
+    var result = dialog.run();
+
+    if (!result) {
+      dialog.finish();
+      return false;
+    }
+  }
+}
+var attached = false;
+function attachToConsole() {
+  if (attached) {
+    output = "";
+    return;
+  }
+
+  attached = true;
+  console.log_base = console.log;
+  console.group_base = console.group;
+
+  console.log = function (txt) {
+    output = txt + "\n" + output;
+    console.log_base(txt);
+  };
+
+  console.group = function (txt) {
+    currentGroup = txt;
+    console.group_base(txt);
+  };
+}
+
+function copyRect(rect) {
+  return NSMakeRect(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height);
+}
+
+function uuid() {
+  return NSString.stringWithUUID();
+} // Async
+
+
+function Delegate(selectors) {
+  this.uniqueName = 'DelegateClass' + uuid();
+  this.classDesc = MOClassDescription.allocateDescriptionForClassWithName_superclass_(this.uniqueName, NSObject);
+  this.handlers = {};
+
+  this.getClass = function () {
+    return NSClassFromString(this.uniqueName);
+  };
+
+  this.getInstance = function () {
+    return NSClassFromString(this.uniqueName).new();
+  };
+
+  this.classDesc.registerClass();
+
+  for (var s in selectors) {
+    this.handlers[s] = selectors[s];
+
+    var h = function () {
+      return this.handlers[s].apply(this.classDesc, arguments);
+    }.bind(this);
+
+    var args = [],
+        regex = /:/g;
+
+    if (regex.exec(s)) {
+      args.push('arg' + args.length);
+    }
+
+    this.classDesc.addInstanceMethodWithSelector_function_(NSSelectorFromString(s), eval('(function(' + args.join(',') + '){ return h.apply(this, arguments); })'));
+  }
+}
+function showOperationMessage(title, message, error) {
+  var alert = NSAlert.alloc().init();
+  alert.accessoryView = NSView.alloc().initWithFrame(NSMakeRect(0, 0, 700, 400));
+  if (error) alert.setAlertStyle(2);else alert.icon = NSImage.alloc().initByReferencingFile(context.plugin.urlForResourceNamed("gx.png").path());
+  alert.addButtonWithTitle("Close");
+  alert.addButtonWithTitle("Cancel");
+  alert.setMessageText(title);
+  alert.setInformativeText(message);
+  var cancelButton = alert.buttons().lastObject();
+  cancelButton.wantsLayer = true;
+  cancelButton.layer().opacity = 0;
+  alert.runModal();
 }
 function isFileExist(source) {
   var manager = NSFileManager.defaultManager();
@@ -4256,7 +4748,6 @@ var exportLayer = function exportLayer(layer, path) {
   if (layer.exportFormats && layer.exportFormats.length > 0) {
     var formats = new Array();
     var scales = new Array();
-    var prefixes = new Array();
     layer.exportFormats.forEach(function (ef) {
       formats.push(ef.fileFormat);
       scales.push(ef.size);
@@ -4429,7 +4920,7 @@ function copyFonts(doc, path) {
 }
 function copyImages(queuePath, fileName, doc) {
   var imageFolder = queuePath + fileName.replace(".sketch", "Images");
-  var enablePreview = sketch_settings__WEBPACK_IMPORTED_MODULE_1___default.a.settingForKey(_constants__WEBPACK_IMPORTED_MODULE_3__["SettingKeys"].ENABLE_PREVIEW) == 1;
+  var enablePreview = sketch_settings__WEBPACK_IMPORTED_MODULE_1___default.a.settingForKey(_constants__WEBPACK_IMPORTED_MODULE_4__["SettingKeys"].ENABLE_PREVIEW) == 1;
   if (enablePreview) generateArtboardImages(doc, queuePath + "/gx-preview/");
   console.log("Images to :" + imageFolder);
   doc.pages.forEach(function (page) {
@@ -4494,17 +4985,6 @@ module.exports = require("events");
 /***/ (function(module, exports) {
 
 module.exports = require("sketch");
-
-/***/ }),
-
-/***/ "sketch/async":
-/*!*******************************!*\
-  !*** external "sketch/async" ***!
-  \*******************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = require("sketch/async");
 
 /***/ }),
 

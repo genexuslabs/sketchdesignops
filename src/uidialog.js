@@ -15,6 +15,7 @@ class UIAbstractWindow {
 
     constructor(window, intRect) {
         this.window = window
+        this.buttonOK = null;
 
         var container = NSView.alloc().initWithFrame(intRect)
         this.container = container
@@ -36,6 +37,10 @@ class UIAbstractWindow {
         this.leftColWidth = 0
         this.textOffset = 0
     }
+
+    copyRect(rect) {
+        return NSMakeRect(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height)
+      }
 
     initTabs(tabs) {
         const intRect = this.rect
@@ -120,6 +125,31 @@ class UIAbstractWindow {
         this.getNewFrame(0)
     }
 
+    addFullLabel(id, text, height = 40) {
+        var frame = null
+        frame = NSMakeRect(0, this.y - height - this.textOffset, 800, height)
+
+        let scrollView = NSScrollView.alloc().initWithFrame(frame);
+        scrollView.hasVerticalScroller = true;
+        scrollView.hasHorizontalScroller = true;
+        
+        scrollView.drawsBackground = false;
+        scrollView.drawsBackground = false;
+     
+        const label = NSTextView.alloc().initWithFrame(frame);
+        label.setString(text);
+        label.setDrawsBackground(false);
+        label.setEditable(false);
+        label.setSelectable(true);
+     
+        if ('' != id) this.views[id] = label
+        scrollView.addSubview(label);
+        this.container.addSubview(scrollView)
+        scrollView.documentView = label;
+      
+        return label;
+    }
+
     addLeftLabel(id, text, height = 40) {
         var frame = null
 
@@ -146,7 +176,7 @@ class UIAbstractWindow {
     }
 
     addLabel(id, text, height = 25, frame = undefined) {
-        const myframe = frame ? Utils.copyRect(frame) : undefined
+        const myframe = frame ? this.copyRect(frame) : undefined
         if (myframe) myframe.size.height = height
         const label = NSTextField.alloc().initWithFrame(myframe ? myframe : this.getNewFrame(height));
         label.setStringValue(text);
@@ -269,7 +299,7 @@ class UIAbstractWindow {
         if (opt.label != '') this.addLabel(opt.id + "Label", opt.label, 17)
 
         const frame = this.getNewFrame(28, opt.width - opt.widthSelect - 5)
-        const frame2 = Utils.copyRect(frame)
+        const frame2 = copyRect(frame)
         frame2.origin.x = frame2.origin.x + opt.width - opt.widthSelect
         frame2.origin.y -= 3
 
@@ -417,6 +447,22 @@ class UIAbstractWindow {
         return nImageView
     }
 
+    addProgress(indeterminate, min = 0, max = 100, frame = undefined)				{
+      
+        var frame = NSMakeRect(10 , this.y - 40, NSWidth(this.rect) - 10 , 40)
+        this.y -= 40 ;
+     
+        var bar = NSProgressIndicator.alloc().initWithFrame(frame);
+        bar.setStyle(0);
+        bar.setBezeled(true);
+        bar.setMinValue(min);
+        bar.setMaxValue(max);
+        bar.setDoubleValue(0);
+        bar.setIndeterminate(indeterminate);
+        this.container.addSubview(bar); 
+        return bar;
+    }
+
 
     finish() {
         this.window = null
@@ -426,6 +472,7 @@ class UIAbstractWindow {
 
 export class UIDialog extends UIAbstractWindow {
 
+     
     static setUp(context) {
         UIDialog_iconImage = NSImage.alloc().initByReferencingFile(context.plugin.urlForResourceNamed("gx.png").path())
     }
@@ -437,12 +484,21 @@ export class UIDialog extends UIAbstractWindow {
         if (description != '') {
             window.setInformativeText(description)
         }
-        if (okButtonTitle) window.addButtonWithTitle(okButtonTitle)
-        if (cancelButtonTitle) window.addButtonWithTitle(cancelButtonTitle)
-        if (thirdButtonTitle) window.addButtonWithTitle(thirdButtonTitle)
-
+     
+      
 
         super(window, rect)
+
+        if (okButtonTitle) 
+            this.buttonOK = window.addButtonWithTitle(okButtonTitle)
+        if (cancelButtonTitle) window.addButtonWithTitle(cancelButtonTitle)
+        if (thirdButtonTitle) window.addButtonWithTitle(thirdButtonTitle)
+    
+    }
+
+    setAction(func)
+    {
+        this.buttonOK.setCOSJSTargetFunction(func);
     }
 
 

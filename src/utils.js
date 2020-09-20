@@ -1,6 +1,7 @@
 import sketch from 'sketch';
 import Settings from 'sketch/settings';
 import { spawnSync, execSync } from '@skpm/child_process';
+import { UIDialog } from './uidialog';
 import { SettingKeys } from './constants';
 
 export function getJsonDocument(doc) {
@@ -19,6 +20,155 @@ export function getJsonDocument(doc) {
     }
   }
   return null;
+}
+
+export var output = "";
+export var currentGroup = "";
+
+export var feedbackContext = {
+  actionName: "empty",
+  totalSteps: 0,
+  currentStep: 0,
+  currentStepName: "empty"
+}
+
+export function startOperationContext(actionName, totalSteps) {
+  feedbackContext.actionName = actionName;
+  feedbackContext.totalSteps = totalSteps;
+  feedbackContext.currentStep = 0;
+  feedbackContext.currentStepName = "";
+}
+
+export function step(stepName) {
+  feedbackContext.currentStep += 1;
+  feedbackContext.currentStepName = stepName;
+  console.log("STEP: " + stepName);
+}
+
+
+export function runOnBackground(runCommand, title, description, actionName) {
+  UIDialog.setUp(context);
+  const dialog = new UIDialog(title, NSMakeRect(0, 0, 400, 180), actionName, description, "Close")
+  var step = 1;
+  var prc = new Delegate(
+      { 'next:': function next() {
+            if (!(step in steps))
+            {
+               lbl.setString(output);
+               return;
+            }  
+            steps[step]();
+            step++;
+      }
+      }
+  );
+  var timer ;
+  var steps = {
+      1 : function() {
+        progress.setHidden(false);
+        progress.startAnimation(nil);
+        lbl.setString(output);
+      },
+      2 : function() {
+        lbl.setString(output);
+      },
+      3 : function() {
+        runCommand();
+        lbl.setString(output);
+     },
+      4 : function() {
+        timer.invalidate();
+        progress.stopAnimation(null);
+        lbl.setString(output);
+      }
+  };
+  var onExport = function onExport(sender) {
+    step = 1;
+    attachToConsole();
+    timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats(0.1, prc.getInstance(), 'next:', nil, true);
+    NSRunLoop.currentRunLoop().addTimer_forMode(timer, NSModalPanelRunLoopMode);
+  }
+  dialog.setAction(onExport);
+  var progress = dialog.addProgress(true, 0, 10);
+  progress.setHidden(true);
+  var lbl = dialog.addFullLabel("out", "", 100);
+ // Run event loop
+  while (true) {
+    const result = dialog.run()
+    if (!result) {
+      dialog.finish()
+      return false
+    }
+  }
+}
+
+
+var attached = false;
+
+export function attachToConsole() {
+  if (attached)
+  {
+    output = "";
+    return;
+  } 
+  attached = true;
+  console.log_base = console.log;
+  console.group_base = console.group;
+
+  console.log = function (txt) {
+    output = txt + "\n" + output;
+    console.log_base(txt);
+  };
+  console.group = function (txt) {
+    currentGroup = txt;
+    console.group_base(txt);
+  };
+
+}
+
+function copyRect(rect) {
+  return NSMakeRect(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height)
+}
+
+function uuid() { return NSString.stringWithUUID(); }
+// Async
+export function Delegate(selectors) {
+  this.uniqueName = 'DelegateClass' + uuid();
+  this.classDesc = MOClassDescription.allocateDescriptionForClassWithName_superclass_(this.uniqueName, NSObject);
+  this.handlers = {};
+  this.getClass = function () { return NSClassFromString(this.uniqueName); };
+  this.getInstance = function () { return NSClassFromString(this.uniqueName).new(); };
+  this.classDesc.registerClass();
+  for (var s in selectors) {
+    this.handlers[s] = selectors[s];
+    var h = (function () { return this.handlers[s].apply(this.classDesc, arguments); }).bind(this);
+    var args = [],
+      regex = /:/g;
+    if (regex.exec(s)) {
+      args.push('arg' + args.length);
+    }
+    this.classDesc.addInstanceMethodWithSelector_function_(NSSelectorFromString(s), eval('(function(' + args.join(',') + '){ return h.apply(this, arguments); })'));
+  }
+}
+
+export function showOperationMessage(title, message, error) {
+  var alert = NSAlert.alloc().init();
+
+  alert.accessoryView = NSView.alloc().initWithFrame(NSMakeRect(0, 0, 700, 400));
+  if (error)
+    alert.setAlertStyle(2);
+  else
+    alert.icon = NSImage.alloc().initByReferencingFile(context.plugin.urlForResourceNamed("gx.png").path());
+  alert.addButtonWithTitle("Close");
+  alert.addButtonWithTitle("Cancel");
+
+  alert.setMessageText(title);
+  alert.setInformativeText(message);
+  var cancelButton = alert.buttons().lastObject();
+  cancelButton.wantsLayer = true;
+  cancelButton.layer().opacity = 0;
+
+  alert.runModal();
 }
 
 export function isFileExist(source) {
@@ -155,7 +305,6 @@ var exportLayer = function (layer, path) {
   if (layer.exportFormats && layer.exportFormats.length > 0) {
     var formats = new Array();
     var scales = new Array();
-    var prefixes = new Array();
     layer.exportFormats.forEach(ef => {
       formats.push(ef.fileFormat);
       scales.push(ef.size);

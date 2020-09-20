@@ -229,15 +229,25 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "UIDialog", function() { return UIDialog; });
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
 
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
+function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
+
 function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it.return != null) it.return(); } finally { if (didErr) throw err; } } }; }
 
-function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -267,6 +277,7 @@ var UIAbstractWindow = /*#__PURE__*/function () {
     _classCallCheck(this, UIAbstractWindow);
 
     this.window = window;
+    this.buttonOK = null;
     var container = NSView.alloc().initWithFrame(intRect);
     this.container = container;
     this.topContainer = container;
@@ -285,6 +296,11 @@ var UIAbstractWindow = /*#__PURE__*/function () {
       this.leftColumn = false;
       this.leftColWidth = 0;
       this.textOffset = 0;
+    }
+  }, {
+    key: "copyRect",
+    value: function copyRect(rect) {
+      return NSMakeRect(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height);
     }
   }, {
     key: "initTabs",
@@ -359,6 +375,28 @@ var UIAbstractWindow = /*#__PURE__*/function () {
       this.getNewFrame(0);
     }
   }, {
+    key: "addFullLabel",
+    value: function addFullLabel(id, text) {
+      var height = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 40;
+      var frame = null;
+      frame = NSMakeRect(0, this.y - height - this.textOffset, 800, height);
+      var scrollView = NSScrollView.alloc().initWithFrame(frame);
+      scrollView.hasVerticalScroller = true;
+      scrollView.hasHorizontalScroller = true;
+      scrollView.drawsBackground = false;
+      scrollView.drawsBackground = false;
+      var label = NSTextView.alloc().initWithFrame(frame);
+      label.setString(text);
+      label.setDrawsBackground(false);
+      label.setEditable(false);
+      label.setSelectable(true);
+      if ('' != id) this.views[id] = label;
+      scrollView.addSubview(label);
+      this.container.addSubview(scrollView);
+      scrollView.documentView = label;
+      return label;
+    }
+  }, {
     key: "addLeftLabel",
     value: function addLeftLabel(id, text) {
       var height = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 40;
@@ -385,7 +423,7 @@ var UIAbstractWindow = /*#__PURE__*/function () {
     value: function addLabel(id, text) {
       var height = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 25;
       var frame = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : undefined;
-      var myframe = frame ? Utils.copyRect(frame) : undefined;
+      var myframe = frame ? this.copyRect(frame) : undefined;
       if (myframe) myframe.size.height = height;
       var label = NSTextField.alloc().initWithFrame(myframe ? myframe : this.getNewFrame(height));
       label.setStringValue(text);
@@ -503,7 +541,7 @@ var UIAbstractWindow = /*#__PURE__*/function () {
       if (!('askFilePath' in opt)) opt.askFilePath = false;
       if (opt.label != '') this.addLabel(opt.id + "Label", opt.label, 17);
       var frame = this.getNewFrame(28, opt.width - opt.widthSelect - 5);
-      var frame2 = Utils.copyRect(frame);
+      var frame2 = copyRect(frame);
       frame2.origin.x = frame2.origin.x + opt.width - opt.widthSelect;
       frame2.origin.y -= 3;
       var input = 'comboBoxOptions' in opt ? this.addComboBox({
@@ -543,12 +581,12 @@ var UIAbstractWindow = /*#__PURE__*/function () {
 
       if (selectItem < 0) selectItem = 0;
       var group = this.startRadioButtions(id, selectItem);
-      var _iteratorNormalCompletion = true;
-      var _didIteratorError = false;
-      var _iteratorError = undefined;
+
+      var _iterator = _createForOfIteratorHelper(options),
+          _step;
 
       try {
-        for (var _iterator = options[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+        for (_iterator.s(); !(_step = _iterator.n()).done;) {
           var item = _step.value;
           var index = group.btns.length;
           var btn = NSButton.alloc().initWithFrame(this.getNewFrame(18, width));
@@ -562,18 +600,9 @@ var UIAbstractWindow = /*#__PURE__*/function () {
           group.btns.push(btn);
         }
       } catch (err) {
-        _didIteratorError = true;
-        _iteratorError = err;
+        _iterator.e(err);
       } finally {
-        try {
-          if (!_iteratorNormalCompletion && _iterator.return != null) {
-            _iterator.return();
-          }
-        } finally {
-          if (_didIteratorError) {
-            throw _iteratorError;
-          }
-        }
+        _iterator.f();
       }
 
       return group;
@@ -666,6 +695,30 @@ var UIAbstractWindow = /*#__PURE__*/function () {
       return nImageView;
     }
   }, {
+    key: "addProgress",
+    value: function addProgress(indeterminate) {
+      var _this = this;
+
+      var min = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+      var max = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 100;
+      var frame = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : undefined;
+      return function (frame) {
+        var frame = NSMakeRect(10, _this.y - 40, NSWidth(_this.rect) - 10, 40);
+        _this.y -= 40;
+        var bar = NSProgressIndicator.alloc().initWithFrame(frame);
+        bar.setStyle(0);
+        bar.setBezeled(true);
+        bar.setMinValue(min);
+        bar.setMaxValue(max);
+        bar.setDoubleValue(0);
+        bar.setIndeterminate(indeterminate);
+
+        _this.container.addSubview(bar);
+
+        return bar;
+      }(frame);
+    }
+  }, {
     key: "finish",
     value: function finish() {
       this.window = null;
@@ -678,6 +731,8 @@ var UIAbstractWindow = /*#__PURE__*/function () {
 var UIDialog = /*#__PURE__*/function (_UIAbstractWindow) {
   _inherits(UIDialog, _UIAbstractWindow);
 
+  var _super = _createSuper(UIDialog);
+
   _createClass(UIDialog, null, [{
     key: "setUp",
     value: function setUp(context) {
@@ -686,6 +741,8 @@ var UIDialog = /*#__PURE__*/function (_UIAbstractWindow) {
   }]);
 
   function UIDialog(title, rect, okButtonTitle) {
+    var _this2;
+
     var description = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : '';
     var cancelButtonTitle = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : "Cancel";
     var thirdButtonTitle = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : undefined;
@@ -700,13 +757,19 @@ var UIDialog = /*#__PURE__*/function (_UIAbstractWindow) {
       window.setInformativeText(description);
     }
 
-    if (okButtonTitle) window.addButtonWithTitle(okButtonTitle);
+    _this2 = _super.call(this, window, rect);
+    if (okButtonTitle) _this2.buttonOK = window.addButtonWithTitle(okButtonTitle);
     if (cancelButtonTitle) window.addButtonWithTitle(cancelButtonTitle);
     if (thirdButtonTitle) window.addButtonWithTitle(thirdButtonTitle);
-    return _possibleConstructorReturn(this, _getPrototypeOf(UIDialog).call(this, window, rect));
+    return _this2;
   }
 
   _createClass(UIDialog, [{
+    key: "setAction",
+    value: function setAction(func) {
+      this.buttonOK.setCOSJSTargetFunction(func);
+    }
+  }, {
     key: "run",
     value: function run() {
       this.window.setAccessoryView(this.topContainer);

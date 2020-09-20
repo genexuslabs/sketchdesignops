@@ -34,10 +34,10 @@ export default function (context) {
 
   if (spawn.status > 0) {
     console.log(Error(spawn.stderr));
-    sketch.UI.message("😔 Some error occurs, see console for further details");
+    sketch.UI.alert("😔 Some error occurs, see console for further details");
   }
   else
-    sketch.UI.message("Opening the result ! 💚"); 
+    sketch.UI.alert("Opening the result ! 💚"); 
 }
 
 

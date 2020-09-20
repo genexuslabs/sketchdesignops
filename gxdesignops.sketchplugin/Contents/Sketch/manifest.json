@@ -38,7 +38,7 @@
       "gxdesignops.set-queue-path"
     ]
   },
-  "version": "2.3.2",
+  "version": "2.3.3",
   "description": "Sketch Plugin For GeneXus Design Ops Cycles",
   "name": "GeneXus DesignOps",
   "identifier": "GeneXus DesignOps",

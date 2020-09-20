@@ -1,5 +1,5 @@
 import sketch from 'sketch';
-import { copyFile, copyImages, getFileAndQueueName , getQueuePath, uploadToS3} from './utils';
+import { copyFile, copyImages, getFileAndQueueName , getQueuePath, uploadToS3, output, showOperationMessage} from './utils';
 import { spawnSync, execSync } from '@skpm/child_process';
 import Settings from 'sketch/settings';
 import {  SettingKeys} from './constants';
@@ -7,10 +7,13 @@ import {  SettingKeys} from './constants';
 
 
 export default function() {
+  sketch.UI.alert("Copied to Design Ops Queue ! 💚");
   const doc = sketch.getSelectedDocument()
   var queuePath = getQueuePath();
   if (queuePath)
-    copySketch(queuePath, doc, true);
+    if (!copySketch(queuePath, doc, true))
+      showOperationMessage("😔 Some error occurs, see console for further details", output);
+
 }
 
 
@@ -41,10 +44,10 @@ export function copySketch(queuePath, doc, images) {
   {
     const ret = copyFile(fromCopyFile, toCopyFile);
     if (!ret) {
-      sketch.UI.message("😔 Some error occurs, see console for further details");
+      showOperationMessage("😔 Some error occurs, see console for further details", output);
     }
     else {
-      sketch.UI.message("Copied to Design Ops Queue ! 💚");
+      sketch.UI.alert("GeneXus", "Copied to Design Ops Queue ! 💚");
     }
   }
 }

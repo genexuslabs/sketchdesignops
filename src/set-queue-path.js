@@ -4,6 +4,8 @@ import { SettingKeys } from './constants';
 
 
 export default function (context) {
+
+  
   // Read settings
   let enableS3 = Settings.settingForKey(SettingKeys.ENABLE_S3) == 1
   let enablePreview = Settings.settingForKey(SettingKeys.ENABLE_PREVIEW) == 1
