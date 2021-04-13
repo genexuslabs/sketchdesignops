@@ -3,6 +3,11 @@
   "icon": "gx.png",
   "commands": [
     {
+      "name": "Build and Deploy Prototype",
+      "identifier": "gxdesignops.deploy-to-cloud-identifier",
+      "script": "__deploy-to-cloud.js"
+    },
+    {
       "name": "Send Sketch and Images ",
       "identifier": "gxdesignops.send-to-queue-identifier",
       "script": "__send-to-queue.js"
@@ -31,6 +36,8 @@
   "menu": {
     "title": "GxDesignOps",
     "items": [
+      "gxdesignops.deploy-to-cloud-identifier",
+      "-",
       "gxdesignops.send-to-queue-identifier-gx",
       "gxdesignops.file-send-to-queue-identifier",
       "-",
@@ -38,7 +45,7 @@
       "gxdesignops.set-queue-path"
     ]
   },
-  "version": "2.3.3",
+  "version": "2.4.1",
   "description": "Sketch Plugin For GeneXus Design Ops Cycles",
   "name": "GeneXus DesignOps",
   "identifier": "GeneXus DesignOps",

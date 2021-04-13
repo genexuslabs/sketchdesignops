@@ -39,6 +39,10 @@ export function startOperationContext(actionName, totalSteps) {
   feedbackContext.currentStepName = "";
 }
 
+export function openUrl(url) {
+  NSWorkspace.sharedWorkspace().openURL(NSURL.URLWithString(url));
+
+}
 export function step(stepName) {
   feedbackContext.currentStep += 1;
   feedbackContext.currentStepName = stepName;
@@ -51,36 +55,36 @@ export function runOnBackground(runCommand, title, description, actionName) {
   const dialog = new UIDialog(title, NSMakeRect(0, 0, 400, 180), actionName, description, "Close")
   var step = 1;
   var prc = new Delegate(
-      { 'next:': function next() {
-            if (!(step in steps))
-            {
-               lbl.setString(output);
-               return;
-            }  
-            steps[step]();
-            step++;
+    {
+      'next:': function next() {
+        if (!(step in steps)) {
+          lbl.setString(output);
+          return;
+        }
+        steps[step]();
+        step++;
       }
-      }
+    }
   );
-  var timer ;
+  var timer;
   var steps = {
-      1 : function() {
-        progress.setHidden(false);
-        progress.startAnimation(nil);
-        lbl.setString(output);
-      },
-      2 : function() {
-        lbl.setString(output);
-      },
-      3 : function() {
-        runCommand();
-        lbl.setString(output);
-     },
-      4 : function() {
-        timer.invalidate();
-        progress.stopAnimation(null);
-        lbl.setString(output);
-      }
+    1: function () {
+      progress.setHidden(false);
+      progress.startAnimation(nil);
+      lbl.setString(output);
+    },
+    2: function () {
+      lbl.setString(output);
+    },
+    3: function () {
+      runCommand();
+      lbl.setString(output);
+    },
+    4: function () {
+      timer.invalidate();
+      progress.stopAnimation(null);
+      lbl.setString(output);
+    }
   };
   var onExport = function onExport(sender) {
     step = 1;
@@ -92,7 +96,7 @@ export function runOnBackground(runCommand, title, description, actionName) {
   var progress = dialog.addProgress(true, 0, 10);
   progress.setHidden(true);
   var lbl = dialog.addFullLabel("out", "", 100);
- // Run event loop
+  // Run event loop
   while (true) {
     const result = dialog.run()
     if (!result) {
@@ -106,11 +110,10 @@ export function runOnBackground(runCommand, title, description, actionName) {
 var attached = false;
 
 export function attachToConsole() {
-  if (attached)
-  {
+  if (attached) {
     output = "";
     return;
-  } 
+  }
   attached = true;
   console.log_base = console.log;
   console.group_base = console.group;
@@ -154,7 +157,7 @@ export function Delegate(selectors) {
 export function showOperationMessage(title, message, error) {
   var alert = NSAlert.alloc().init();
 
-  alert.accessoryView = NSView.alloc().initWithFrame(NSMakeRect(0, 0, 700, 400));
+  alert.accessoryView = NSView.alloc().initWithFrame(NSMakeRect(0, 0, 600, 400));
   if (error)
     alert.setAlertStyle(2);
   else
@@ -215,6 +218,32 @@ export function getFileAndQueueName(doc, queuePath) {
     }
   }
   return { fileName, queuePath };
+}
+
+export function syncFetch(url, method, body, contentType) {
+  var curl_command = `curl -X ${method} -H "Content-Type: ${contentType}" -d '${body}' ${url}`
+
+  curl_command = curl_command;
+  log("syncFetch: " + curl_command);
+  var out = execSync(curl_command);
+  if (out && out.length > 0) {
+    console.log("syncFetch output:" + out.toString());
+    return out.toString();
+  }
+  throw new Error('curl unknown error');
+}
+
+export function syncS3PUT(url, filePath, contentType) {
+  var curl_command = `curl -X PUT -T "${filePath}" -H "Content-Type: ${contentType}" -L "${url}"`;
+  curl_command = curl_command;
+  log("synncS3PUT: " + curl_command);
+  var out = execSync(curl_command);
+  // When success the length is nothing, when fail AWS is sending an XML format, so parse it.
+  if (out && out.length > 0) {
+    console.log("syncFetch output:" + out.toString());
+    throw new Error('curl unknown error');
+  }
+  console.log("S3 upload OK");
 }
 
 export function uploadToS3(fileName, file, bucketName, s3Secret, s3AccessKey, errors) {
@@ -412,7 +441,7 @@ function getFiles(path) {
       return ret.toString().split('\n')
     }
   }
-  catch{ }
+  catch { }
   return [];
 }
 

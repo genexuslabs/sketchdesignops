@@ -3,6 +3,11 @@
   "icon": "gx.png",
   "commands": [
     {
+      "name": "Build and Deploy Prototype",
+      "identifier": "gxdesignops.deploy-to-cloud-identifier",
+      "script": "./deploy-to-cloud.js"
+    },
+    {
       "name": "Send Sketch and Images ",
       "identifier": "gxdesignops.send-to-queue-identifier",
       "script": "./send-to-queue.js"
@@ -31,6 +36,8 @@
   "menu": {
     "title": "GxDesignOps",
     "items": [
+      "gxdesignops.deploy-to-cloud-identifier",
+      "-",
       "gxdesignops.send-to-queue-identifier-gx",
       "gxdesignops.file-send-to-queue-identifier",
       "-",

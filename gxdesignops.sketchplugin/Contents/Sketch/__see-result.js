@@ -3974,6 +3974,10 @@ else if (true) !(__WEBPACK_AMD_DEFINE_RESULT__ = (function () { return xmlToJSON
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SettingKeys", function() { return SettingKeys; });
 var SettingKeys = {
+  PROJECT_ID: "projectId",
+  PROJECT_NAME: "projectName",
+  PROJECT_USER_NAME: "userName",
+  SERVER_URL: "serverUrl",
   S3_BUCKET: "gxBucket",
   S3_SECRET_KEY: "gxS3SecretKey",
   S3_ACCESS_KEY: "gxS3AccessKey",
@@ -4614,7 +4618,7 @@ var UIDialog = /*#__PURE__*/function (_UIAbstractWindow) {
 /*!**********************!*\
   !*** ./src/utils.js ***!
   \**********************/
-/*! exports provided: getJsonDocument, output, currentGroup, feedbackContext, startOperationContext, step, runOnBackground, attachToConsole, Delegate, showOperationMessage, isFileExist, copyFile2, writeToFile, removeFile, getFileAndQueueName, uploadToS3, copyFile, generateArtboardImages, copyFonts, copyImages, getQueuePath, askQueuePath */
+/*! exports provided: getJsonDocument, output, currentGroup, feedbackContext, startOperationContext, openUrl, step, runOnBackground, attachToConsole, Delegate, showOperationMessage, isFileExist, copyFile2, writeToFile, removeFile, getFileAndQueueName, syncFetch, syncS3PUT, uploadToS3, copyFile, generateArtboardImages, copyFonts, copyImages, getQueuePath, askQueuePath */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -4624,6 +4628,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "currentGroup", function() { return currentGroup; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "feedbackContext", function() { return feedbackContext; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "startOperationContext", function() { return startOperationContext; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "openUrl", function() { return openUrl; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "step", function() { return step; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "runOnBackground", function() { return runOnBackground; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "attachToConsole", function() { return attachToConsole; });
@@ -4634,6 +4639,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "writeToFile", function() { return writeToFile; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "removeFile", function() { return removeFile; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "getFileAndQueueName", function() { return getFileAndQueueName; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "syncFetch", function() { return syncFetch; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "syncS3PUT", function() { return syncS3PUT; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "uploadToS3", function() { return uploadToS3; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "copyFile", function() { return copyFile; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "generateArtboardImages", function() { return generateArtboardImages; });
@@ -4688,6 +4695,9 @@ function startOperationContext(actionName, totalSteps) {
   feedbackContext.currentStep = 0;
   feedbackContext.currentStepName = "";
 }
+function openUrl(url) {
+  NSWorkspace.sharedWorkspace().openURL(NSURL.URLWithString(url));
+}
 function step(stepName) {
   feedbackContext.currentStep += 1;
   feedbackContext.currentStepName = stepName;
@@ -4723,8 +4733,8 @@ function runOnBackground(runCommand, title, description, actionName) {
       lbl.setString(output);
     },
     4: function _() {
-      timer.invalidate();
-      progress.stopAnimation(null);
+      timer.invalidate(); //progress.stopAnimation(null);
+
       lbl.setString(output);
     }
   };
@@ -4745,7 +4755,7 @@ function runOnBackground(runCommand, title, description, actionName) {
     var result = dialog.run();
 
     if (!result) {
-      dialog.finish();
+      // dialog.finish()
       return false;
     }
   }
@@ -4815,7 +4825,7 @@ function Delegate(selectors) {
 }
 function showOperationMessage(title, message, error) {
   var alert = NSAlert.alloc().init();
-  alert.accessoryView = NSView.alloc().initWithFrame(NSMakeRect(0, 0, 700, 400));
+  alert.accessoryView = NSView.alloc().initWithFrame(NSMakeRect(0, 0, 600, 400));
   if (error) alert.setAlertStyle(2);else alert.icon = NSImage.alloc().initByReferencingFile(context.plugin.urlForResourceNamed("gx.png").path());
   alert.addButtonWithTitle("Close");
   alert.addButtonWithTitle("Cancel");
@@ -4873,6 +4883,32 @@ function getFileAndQueueName(doc, queuePath) {
     fileName: fileName,
     queuePath: queuePath
   };
+}
+function syncFetch(url, method, body, contentType) {
+  var curl_command = "curl -X ".concat(method, " -H \"Content-Type: ").concat(contentType, "\" -d '").concat(body, "' ").concat(url);
+  curl_command = curl_command;
+  log("syncFetch: " + curl_command);
+  var out = Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_2__["execSync"])(curl_command);
+
+  if (out && out.length > 0) {
+    console.log("syncFetch output:" + out.toString());
+    return out.toString();
+  }
+
+  throw new Error('curl unknown error');
+}
+function syncS3PUT(url, filePath, contentType) {
+  var curl_command = "curl -X PUT -T \"".concat(filePath, "\" -H \"Content-Type: ").concat(contentType, "\" -L \"").concat(url, "\"");
+  curl_command = curl_command;
+  log("synncS3PUT: " + curl_command);
+  var out = Object(_skpm_child_process__WEBPACK_IMPORTED_MODULE_2__["execSync"])(curl_command); // When success the length is nothing, when fail AWS is sending an XML format, so parse it.
+
+  if (out && out.length > 0) {
+    console.log("syncFetch output:" + out.toString());
+    throw new Error('curl unknown error');
+  }
+
+  console.log("S3 upload OK");
 }
 function uploadToS3(fileName, file, bucketName, s3Secret, s3AccessKey, errors) {
   // Bucket Names with special characters are not allowed by AWS S3 so ensure a valid name

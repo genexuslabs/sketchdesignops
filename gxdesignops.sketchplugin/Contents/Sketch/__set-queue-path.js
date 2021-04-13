@@ -104,6 +104,10 @@ var exports =
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SettingKeys", function() { return SettingKeys; });
 var SettingKeys = {
+  PROJECT_ID: "projectId",
+  PROJECT_NAME: "projectName",
+  PROJECT_USER_NAME: "userName",
+  SERVER_URL: "serverUrl",
   S3_BUCKET: "gxBucket",
   S3_SECRET_KEY: "gxS3SecretKey",
   S3_ACCESS_KEY: "gxS3AccessKey",
@@ -133,6 +137,10 @@ __webpack_require__.r(__webpack_exports__);
 
 /* harmony default export */ __webpack_exports__["default"] = (function (context) {
   // Read settings
+  var projectId = sketch_settings__WEBPACK_IMPORTED_MODULE_0___default.a.settingForKey(_constants__WEBPACK_IMPORTED_MODULE_2__["SettingKeys"].PROJECT_ID) || uuidv4();
+  var projectName = sketch_settings__WEBPACK_IMPORTED_MODULE_0___default.a.settingForKey(_constants__WEBPACK_IMPORTED_MODULE_2__["SettingKeys"].PROJECT_NAME) || '';
+  var projectUserName = sketch_settings__WEBPACK_IMPORTED_MODULE_0___default.a.settingForKey(_constants__WEBPACK_IMPORTED_MODULE_2__["SettingKeys"].PROJECT_USER_NAME) || '';
+  var serverUrl = sketch_settings__WEBPACK_IMPORTED_MODULE_0___default.a.settingForKey(_constants__WEBPACK_IMPORTED_MODULE_2__["SettingKeys"].SERVER_URL) || 'https://maed962my9.execute-api.us-east-1.amazonaws.com/prod/';
   var enableS3 = sketch_settings__WEBPACK_IMPORTED_MODULE_0___default.a.settingForKey(_constants__WEBPACK_IMPORTED_MODULE_2__["SettingKeys"].ENABLE_S3) == 1;
   var enablePreview = sketch_settings__WEBPACK_IMPORTED_MODULE_0___default.a.settingForKey(_constants__WEBPACK_IMPORTED_MODULE_2__["SettingKeys"].ENABLE_PREVIEW) == 1;
   var enableFonts = sketch_settings__WEBPACK_IMPORTED_MODULE_0___default.a.settingForKey(_constants__WEBPACK_IMPORTED_MODULE_2__["SettingKeys"].ENABLE_FONTS) == 1;
@@ -146,10 +154,11 @@ __webpack_require__.r(__webpack_exports__);
   if (undefined == s3SecretKey) s3SecretKey = "<your secret key>";
   _uidialog__WEBPACK_IMPORTED_MODULE_1__["UIDialog"].setUp(context); // Build dialog
 
-  var dialog = new _uidialog__WEBPACK_IMPORTED_MODULE_1__["UIDialog"]("GeneXus Plugin Configuration", NSMakeRect(0, 0, 400, 270), "Save", "Export & Sharing options");
+  var dialog = new _uidialog__WEBPACK_IMPORTED_MODULE_1__["UIDialog"]("GeneXus Plugin Configuration", NSMakeRect(0, 0, 400, 500), "Save", "Export & Sharing options");
 
   var onCheck = function onCheck() {
     var editable = textS3Bucket.isEditable();
+    text.setEditable(true);
     textS3Bucket.setEnabled(!editable);
     textS3Bucket.setEditable(!editable);
     textS3AccessKey.setEditable(!editable);
@@ -160,7 +169,25 @@ __webpack_require__.r(__webpack_exports__);
     txtQueueDesign.setEnabled(editable);
   };
 
-  _uidialog__WEBPACK_IMPORTED_MODULE_1__["UIDialog"].setUp(context);
+  _uidialog__WEBPACK_IMPORTED_MODULE_1__["UIDialog"].setUp(context); //dialog.addLeftLabel("", "Project Details");
+
+  dialog.addDivider();
+  dialog.addLeftLabel("", "Project Id");
+  var textProjectId = dialog.addTextInput("projectId", "", projectId);
+  dialog.addLeftLabel("", "Project Name");
+  var textProjectName = dialog.addTextInput("projectName", "", projectName, "Project Name");
+  dialog.addLeftLabel("", "User Name");
+  var textProjectUserName = dialog.addTextInput("projectUserName", "", projectUserName, "GeneXus User Account Name");
+  dialog.addLeftLabel("", "Server Url");
+  var textServerUrl = dialog.addTextInput("serverUrl", "", serverUrl, "Server URL");
+  textServerUrl.setEditable(true);
+  textServerUrl.setEnabled(true);
+  textProjectId.setEnabled(true);
+  textProjectId.setEditable(false);
+  textProjectName.setEnabled(true);
+  textProjectName.setEnabled(true);
+  textProjectUserName.setEditable(true);
+  textProjectUserName.setEnabled(true);
   dialog.addLeftLabel("", "Export Options");
   dialog.addDivider();
   dialog.addCheckbox("enablePreview", "Send Preview for Pages", enablePreview, function () {});
@@ -202,6 +229,13 @@ __webpack_require__.r(__webpack_exports__);
     s3SecretKey = dialog.views['s3SecretKey'].stringValue() + "";
     s3AccessKey = dialog.views['s3AccessKey'].stringValue() + "";
     s3Bucket = dialog.views['s3Bucket'].stringValue() + "";
+    var projectNameUserValue = dialog.views['projectName'].stringValue();
+    var projectUserNameUserValue = dialog.views['projectUserName'].stringValue();
+    serverUrl = textServerUrl.stringValue();
+    sketch_settings__WEBPACK_IMPORTED_MODULE_0___default.a.setSettingForKey(_constants__WEBPACK_IMPORTED_MODULE_2__["SettingKeys"].SERVER_URL, serverUrl);
+    sketch_settings__WEBPACK_IMPORTED_MODULE_0___default.a.setSettingForKey(_constants__WEBPACK_IMPORTED_MODULE_2__["SettingKeys"].PROJECT_ID, projectId);
+    sketch_settings__WEBPACK_IMPORTED_MODULE_0___default.a.setSettingForKey(_constants__WEBPACK_IMPORTED_MODULE_2__["SettingKeys"].PROJECT_NAME, projectNameUserValue);
+    sketch_settings__WEBPACK_IMPORTED_MODULE_0___default.a.setSettingForKey(_constants__WEBPACK_IMPORTED_MODULE_2__["SettingKeys"].PROJECT_USER_NAME, projectUserNameUserValue);
     sketch_settings__WEBPACK_IMPORTED_MODULE_0___default.a.setSettingForKey("DesignOpsQueue", queueDesign);
     sketch_settings__WEBPACK_IMPORTED_MODULE_0___default.a.setSettingForKey("gxS3Enabled", enableS3Num);
     sketch_settings__WEBPACK_IMPORTED_MODULE_0___default.a.setSettingForKey("enablePreview", enablePreviewNum);
@@ -214,6 +248,14 @@ __webpack_require__.r(__webpack_exports__);
 
   dialog.finish();
 });
+
+function uuidv4() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    var r = Math.random() * 16 | 0,
+        v = c == 'x' ? r : r & 0x3 | 0x8;
+    return v.toString(16);
+  });
+}
 
 /***/ }),
 

@@ -13,7 +13,6 @@ export default function() {
   if (queuePath)
     if (!copySketch(queuePath, doc, true))
       showOperationMessage("😔 Some error occurs, see console for further details", output);
-
 }
 
 
