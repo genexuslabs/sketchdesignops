@@ -1,13 +1,18 @@
 {
   "compatibleVersion": 3,
   "bundleVersion": 1,
-  "name": "Sketch Plugin Template",
+  "name": "GeneXusDesignOps",
   "title": "GxDesignOps",
   "commands": [
     {
       "name": "Build and Deploy Prototype",
-      "identifier": "sketch-plugin-template.deploy-to-cloud-identifier",
+      "identifier": "gxdesignops.deploy-to-cloud-identifier",
       "script": "__deploy-to-cloud_ts"
+    },
+    {
+      "name": "Status",
+      "identifier": "gxdesignops.deploy-to-cloud-status-identifier",
+      "script": "__deploy-to-cloud-status_ts"
     },
     {
       "name": "Send Sketch and Images ",
@@ -36,10 +41,17 @@
     }
   ],
   "menu": {
-    "title": "Sketch Plugin Template",
+    "title": "GeneXusDesignOps",
     "items": [
+      "gxdesignops.deploy-to-cloud-identifier",
+      "gxdesignops.deploy-to-cloud-status-identifier",
       "-",
-      "sketch-plugin-template.system-info"
+      "gxdesignops.send-to-queue-identifier",
+      "gxdesignops.send-to-queue-identifier-gx",
+      "gxdesignops.file-send-to-queue-identifier",
+      "gxdesignops.see-result",
+      "-",
+      "gxdesignops.set-queue-path"
     ]
   },
   "version": "2.4.1",

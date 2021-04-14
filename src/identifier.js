@@ -1,8 +1,8 @@
 const isDev = process.env.NODE_ENV === 'development';
 
-const id = `sketch-plugin-template${isDev ? '.dev' : ''}`;
+const id = `gxdesignops${isDev ? '.dev' : ''}`;
 
 module.exports = {
-  name: `Sketch Plugin Template${isDev ? ' DEV' : ''}`,
+  name: `GeneXusDesignOps${isDev ? ' DEV' : ''}`,
   identifier: id,
 };

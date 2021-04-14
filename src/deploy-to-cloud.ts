@@ -1,19 +1,21 @@
 import sketch from 'sketch';
-import { openUrl, output, showOperationMessage, syncFetch, attachToConsole, runOnBackground, copyFile, copyImages, getFileAndQueueName, getQueuePath, syncS3PUT, copyFonts, startOperationContext, step } from './utils';
+import { userOutput, showOperationMessage, syncFetch, attachToConsole, copyFile, copyImages, getFileAndQueueName, getQueuePath, syncS3PUT, copyFonts, startOperationContext, step } from './utils';
 import { spawnSync, execSync } from '@skpm/child_process';
 import Settings from 'sketch/settings';
 import { SettingKeys } from './constants';
+import { runOnBackgroundAsync } from './utils-new';
 
-function runCommand() {
-  attachToConsole();  
+
+async function runCommand() {
+  attachToConsole();
   //  try
   {
     const doc = sketch.getSelectedDocument()
     const queuePath = getQueuePath();
     if (queuePath) {
-      if (!publish(queuePath, doc, true)) {
-        
-        showOperationMessage("😔 Some error occurs, see console for further details", output);
+      if (!await publish(queuePath, doc, true)) {
+
+        showOperationMessage("😔 Some error occurs, see console for further details", userOutput);
       }
     }
   }
@@ -23,17 +25,17 @@ function runCommand() {
   // }
 }
 
-export default function () {
-  runOnBackground(runCommand, "Build and Deploy Prototype", "Press the 'Build and Deploy' button to Test your design in the web browser", "Build and Deploy");
+
+export default async function () {
+  await runOnBackgroundAsync(runCommand, "Build and Deploy Prototype", "Press the 'Build and Deploy' button to Test your design in the web browser", "Build and Deploy");
 }
 
 
-export function publish(queuePath, doc, images) {
+export async function publish(queuePath, doc, images) {
   startOperationContext("Build And Deploy Prototype", 10);
 
   step("Reading Settings");
 
-  
   const projectId = Settings.settingForKey(SettingKeys.PROJECT_ID) || uuidv4();
   const projectName = Settings.settingForKey(SettingKeys.PROJECT_NAME) || '';
   const projectUserName = Settings.settingForKey(SettingKeys.PROJECT_USER_NAME) || '';
@@ -47,8 +49,6 @@ export function publish(queuePath, doc, images) {
   var path = queuePath;
   queuePath = "/var/TMP";
   ({ fileName, queuePath } = getFileAndQueueName(doc, path));
-
-  step("copy to temporal directory:" + queuePath);
 
   if (queuePath.localeCompare(path) != 0) {
     var spawn = spawnSync('mkdir', ["-p", queuePath + "/gx/"], { shell: true });
@@ -118,7 +118,8 @@ export function publish(queuePath, doc, images) {
     overwrite: true
   }
 
-  const enqueueRequestInfo = {
+  const enqueueRequestInfo =
+  {
     method: 'POST',
     body: JSON.stringify(enqueueRequest),
     headers: {
@@ -129,11 +130,14 @@ export function publish(queuePath, doc, images) {
   console.log("Fetch: " + enqueueUrl);
   console.log(JSON.stringify(enqueueRequestInfo));
 
-  let responseBody = null;
+  let responseBody: any;
 
-  var response;
+  let response;
   try {
+
+    //response = await fetch(enqueueUrl, enqueueRequestInfo);
     response = syncFetch(enqueueUrl, enqueueRequestInfo.method, enqueueRequestInfo.body, 'application/json');
+    responseBody = JSON.parse(response);
   }
   catch (e) {
     const COMM_FAILED = "Communication with server failed (err.1)";
@@ -142,9 +146,8 @@ export function publish(queuePath, doc, images) {
     sketch.UI.alert(COMM_FAILED, response.status);
     return false;
   }
-  responseBody = response;
-  console.log("fetch response: " + responseBody);
-  const enqueueResponse = JSON.parse(responseBody);
+  console.log("fetch response: " + JSON.stringify(responseBody));
+  const enqueueResponse = responseBody;
 
   if (enqueueResponse.code != 1) {
     const COMM_FAILED = "Server could not handle job";
@@ -165,93 +168,10 @@ export function publish(queuePath, doc, images) {
     return false;
   }
 
-  console.log("Successfully uploaded to S3");
+  step('Job uploaded successfully');
+  sketch.UI.alert("GeneXus", "Your prototype has been uploaded. 💚 Please check status page for work status.");
 
-  step("Check for Build status");
-
-
-  const statusUrl = serverUrl + enqueueResponse.statusUrl;
-
-  let isReady = false;
-  let deployUrl;
-  let pendingRetryCount = 12;
-  let message = '';
-  let failed = false;
-  let waitingRetries = 0;
-  let buildingRetries = 0;
-  let buildingRetryCount = 80;
-  const sleepSeconds = 5;
-  while (!isReady && pendingRetryCount > 0 && !failed && buildingRetryCount > 0) {
-
-    let response = '';
-    try {
-      response = syncFetch(statusUrl, 'GET', '', 'application/json');
-    }
-    catch (e) {
-      console.error(e);
-    }
-    let statusCode = '';
-    if (response) {
-      const statusResponse = JSON.parse(response);
-      statusCode = (statusResponse.status) ? statusResponse.status.status : 'UNKNOWN';
-
-      switch (statusCode) {
-        case 'PENDING':
-        case 'WAITING_UPLOAD':
-          pendingRetryCount--;
-          waitingRetries++;
-          let waitingSeconds = waitingRetries * sleepSeconds;
-          sketch.UI.message(`Waiting for Build server to build project (elapsed time: ${waitingSeconds}s)`);
-          console.log('Waiting for Upload');
-          message = 'Build server may be offline, check with admininstrator';
-
-          break;
-        case 'BUILDING':
-          waitingSeconds = buildingRetries * sleepSeconds;
-          console.log('Building...');
-          sketch.UI.message(`Build Server is building Sketch Project (elapsed time: ${waitingSeconds}s)`);
-          message = 'Build server is building, wait some minutes';
-          buildingRetries++;
-          buildingRetryCount--;
-          break;
-        case 'FAILED':
-          failed = true;
-          console.error('Build failed');
-          message = 'The prototype could not be built with success';
-          break;
-        case 'FINISHED':
-          console.log('Finished!');
-          isReady = true;
-          deployUrl = statusResponse.status.lastDeployUrl;
-          break;
-        default:
-          break;
-      }
-      if (pendingRetryCount <= 0) {
-        /*sketch.UI.getInputFromUser('Do you want to keep waiting?', {
-          type: UI.INPUT_TYPE.selection,
-          possibleValues: ['YES', 'NO'],
-          function(err, value) {
-            if (err) {
-              return;
-            }
-          }
-        });*/
-      }
-      execSync(`sleep ${sleepSeconds}s`, { shell: false });
-    }
-
-  }
-  if (isReady) {
-    openUrl(deployUrl);
-    sketch.UI.alert("GeneXus", "Your prototype is ready! 💚");
-    return true;
-  }
-  else {
-    sketch.UI.alert("GeneXus", message + " 😔😔😔");
-    //sketch.UI.alert("GeneXus", "An error has ocurred. Check logs and retry 😔😔😔");
-    return true;
-  }
+  return true;
 }
 
 function upload(url, filePath) {
@@ -267,9 +187,8 @@ function upload(url, filePath) {
 }
 
 function uuidv4() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
     var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
   });
 }
-

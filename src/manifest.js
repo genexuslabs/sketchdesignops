@@ -7,32 +7,36 @@ const commandList = [
     script: './deploy-to-cloud.ts'
   },
   {
+    name: 'Status',
+    identifier: `${identifier}.deploy-to-cloud-status-identifier`,
+    script: './deploy-to-cloud-status.ts'
+  },
+  {
     name: "Send Sketch and Images ",
-    identifier: "gxdesignops.send-to-queue-identifier",
+    identifier: `${identifier}.send-to-queue-identifier`,
     script: "./send-to-queue.js"
   },
   {
     name: "Send GeneXus Format",
-    identifier: "gxdesignops.send-to-queue-identifier-gx",
+    identifier: `${identifier}.send-to-queue-identifier-gx`,
     script: "./send-to-queue-gx-sketch.js"
   },
   {
     name: "Send only Sketch file",
-    identifier: "gxdesignops.file-send-to-queue-identifier",
+    identifier: `${identifier}.file-send-to-queue-identifier`,
     script: "./send-to-queue-file.js"
   },
   {
     name: "Check for Result Page",
-    identifier: "gxdesignops.see-result",
+    identifier: `${identifier}.see-result`,
     script: "./see-result.ts"
   },
   {
     name: "Configuration",
-    identifier: "gxdesignops.set-queue-path",
+    identifier: `${identifier}.set-queue-path`,
     script: "./set-queue-path.js"
   }
 ];
-
 
 
 module.exports = {
@@ -44,9 +48,15 @@ module.exports = {
   menu: {
     title: name,
     items: [
-      // `${identifier}.init`,
+      `${identifier}.deploy-to-cloud-identifier`,
+      `${identifier}.deploy-to-cloud-status-identifier`,
       '-',
-      `${identifier}.system-info`,
+      `${identifier}.send-to-queue-identifier`,
+      `${identifier}.send-to-queue-identifier-gx`,
+      `${identifier}.file-send-to-queue-identifier`,
+      `${identifier}.see-result`,
+      '-',
+      `${identifier}.set-queue-path`
     ],
   },
 };

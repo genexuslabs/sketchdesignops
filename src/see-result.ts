@@ -6,7 +6,7 @@ export default function () {
   var queuePath = getQueuePath();
   var fileName;
 
-  let doc = ''; // ???
+  let doc = window["doc"] || global["doc"];
 
   ({ fileName, queuePath } = getFileAndQueueName(doc, queuePath));
 

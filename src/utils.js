@@ -24,6 +24,7 @@ export function getJsonDocument(doc) {
 }
 
 export var output = "";
+export var userOutput = "";
 export var currentGroup = "";
 
 export var feedbackContext = {
@@ -47,9 +48,21 @@ export function openUrl(url) {
 export function step(stepName) {
   feedbackContext.currentStep += 1;
   feedbackContext.currentStepName = stepName;
-  console.log("STEP: " + stepName);
+  info("STEP: " + stepName);
 }
 
+export function info(message){
+  userOutput += message + '\r\n';
+  if (dialogLabel) {
+    dialogLabel.setString(userOutput);
+  }
+}
+
+let dialogLabel;
+
+export function setDialogFeedback(lbl) {
+  dialogLabel = lbl;
+}
 
 export function runOnBackground(runCommand, title, description, actionName) {
   UIDialog.setUp(context);
@@ -59,10 +72,7 @@ export function runOnBackground(runCommand, title, description, actionName) {
     {
       'next:': function next() {
         if (!(step in steps)) {
-          
-          lbl.setString(output);
-          
-          
+          dialogLabel.setString(output);
           return;
         }
         steps[step]();
@@ -75,19 +85,19 @@ export function runOnBackground(runCommand, title, description, actionName) {
     1: function () {
       progress.setHidden(false);
       progress.startAnimation(nil);
-      lbl.setString(output);
+      dialogLabel.setString(output);
     },
     2: function () {
-      lbl.setString(output);
+      dialogLabel.setString(output);
     },
     3: function () {
       runCommand();
-      lbl.setString(output);
+      dialogLabel.setString(output);
     },
     4: function () {
       timer.invalidate();
       progress.stopAnimation(null);
-      lbl.setString(output);
+      dialogLabel.setString(output);
     }
   };
   var onExport = function onExport(sender) {
@@ -99,7 +109,7 @@ export function runOnBackground(runCommand, title, description, actionName) {
   dialog.setAction(onExport);
   var progress = dialog.addProgress(true, 0, 10);
   progress.setHidden(true);
-  var lbl = dialog.addFullLabel("out", "", 100);
+  dialogLabel = dialog.addFullLabel("out", "", 100);
   // Run event loop
   while (true) {
     const result = dialog.run()
@@ -116,6 +126,7 @@ var attached = false;
 export function attachToConsole() {
   if (attached) {
     output = "";
+    userOutput = '';
     return;
   }
   attached = true;
@@ -231,7 +242,7 @@ export function syncFetch(url, method, body, contentType) {
   log("syncFetch: " + curl_command);
   var out = execSync(curl_command);
   if (out && out.length > 0) {
-    console.log("syncFetch output:" + out.toString());
+    //console.log("syncFetch output:" + out.toString());
     return out.toString();
   }
   throw new Error('curl unknown error');
@@ -240,10 +251,11 @@ export function syncFetch(url, method, body, contentType) {
 export function syncS3PUT(url, filePath, contentType) {
   var curl_command = `curl -X PUT -T "${filePath}" -H "Content-Type: ${contentType}" -L "${url}"`;
   curl_command = curl_command;
-  log("synncS3PUT: " + curl_command);
+  //
   var out = execSync(curl_command);
   // When success the length is nothing, when fail AWS is sending an XML format, so parse it.
   if (out && out.length > 0) {
+    log("synncS3PUT: " + curl_command);
     console.log("syncFetch output:" + out.toString());
     throw new Error('curl unknown error');
   }
@@ -264,7 +276,7 @@ export function uploadToS3(fileName, file, bucketName, s3Secret, s3AccessKey, er
   var signatureObj = execSync(signMethod);
   if (signatureObj) {
     var signature = signatureObj.toString().replace(/\r?\n|\r/, "");
-    console.log("Signature: " + signature.toString());
+    //console.log("Signature: " + signature.toString());
     // Now we can try uploading by using the given signature
     var curl_command = `curl -X PUT -T "${file}" -H "Host: ${bucketName}.s3.amazonaws.com" -H "Date: ${dateValue}" -H "Content-Type: ${contentType}" -H "Authorization: AWS ${s3AccessKey}:${signature}" https://${bucketName}.s3.amazonaws.com/${fileName}`;
     console.log(curl_command);
