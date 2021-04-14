@@ -4,6 +4,7 @@ import { spawnSync, execSync } from '@skpm/child_process';
 import { UIDialog } from './uidialog';
 import { SettingKeys } from './constants';
 
+
 export function getJsonDocument(doc) {
   var filePath = decodeURIComponent(doc.path);
   var fileName = decodeURIComponent(doc.path).replace(/^.*[\\\/]/, '').trim();
@@ -58,7 +59,10 @@ export function runOnBackground(runCommand, title, description, actionName) {
     {
       'next:': function next() {
         if (!(step in steps)) {
+          
           lbl.setString(output);
+          
+          
           return;
         }
         steps[step]();

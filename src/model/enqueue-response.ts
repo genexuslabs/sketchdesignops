@@ -1,4 +1,3 @@
-import { IJob } from "./job-interface";
 import { ProjectState } from "./db-state-project";
 import { StandardResponse } from "./standard-response";
 

@@ -5,13 +5,14 @@ import Settings from 'sketch/settings';
 import { SettingKeys } from './constants';
 
 function runCommand() {
-  attachToConsole();
+  attachToConsole();  
   //  try
   {
     const doc = sketch.getSelectedDocument()
     const queuePath = getQueuePath();
     if (queuePath) {
       if (!publish(queuePath, doc, true)) {
+        
         showOperationMessage("😔 Some error occurs, see console for further details", output);
       }
     }
@@ -22,10 +23,9 @@ function runCommand() {
   // }
 }
 
-export default function (context) {
+export default function () {
   runOnBackground(runCommand, "Build and Deploy Prototype", "Press the 'Build and Deploy' button to Test your design in the web browser", "Build and Deploy");
 }
-
 
 
 export function publish(queuePath, doc, images) {
@@ -33,8 +33,7 @@ export function publish(queuePath, doc, images) {
 
   step("Reading Settings");
 
-  return true;
-
+  
   const projectId = Settings.settingForKey(SettingKeys.PROJECT_ID) || uuidv4();
   const projectName = Settings.settingForKey(SettingKeys.PROJECT_NAME) || '';
   const projectUserName = Settings.settingForKey(SettingKeys.PROJECT_USER_NAME) || '';
@@ -160,7 +159,7 @@ export function publish(queuePath, doc, images) {
   step("Uploading to S3");
 
   var errors = [];
-  if (!upload(uploadUrl, toCopyFile, errors)) {
+  if (!upload(uploadUrl, toCopyFile)) {
     console.log(`failed to upload: ${uploadUrl}  ${toCopyFile}`);
     sketch.UI.alert("Upload to S3 failed 😔😔😔", JSON.stringify(errors));
     return false;
@@ -266,3 +265,11 @@ function upload(url, filePath) {
   }
   return false;
 }
+
+function uuidv4() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+

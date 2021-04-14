@@ -3731,7 +3731,6 @@ function runCommand() {
 function publish(queuePath, doc, images) {
   Object(_utils__WEBPACK_IMPORTED_MODULE_1__["startOperationContext"])("Build And Deploy Prototype", 10);
   Object(_utils__WEBPACK_IMPORTED_MODULE_1__["step"])("Reading Settings");
-  return true;
   var projectId = sketch_settings__WEBPACK_IMPORTED_MODULE_3___default.a.settingForKey(_constants__WEBPACK_IMPORTED_MODULE_4__["SettingKeys"].PROJECT_ID) || uuidv4();
   var projectName = sketch_settings__WEBPACK_IMPORTED_MODULE_3___default.a.settingForKey(_constants__WEBPACK_IMPORTED_MODULE_4__["SettingKeys"].PROJECT_NAME) || '';
   var projectUserName = sketch_settings__WEBPACK_IMPORTED_MODULE_3___default.a.settingForKey(_constants__WEBPACK_IMPORTED_MODULE_4__["SettingKeys"].PROJECT_USER_NAME) || '';
@@ -3855,7 +3854,7 @@ function publish(queuePath, doc, images) {
   Object(_utils__WEBPACK_IMPORTED_MODULE_1__["step"])("Uploading to S3");
   var errors = [];
 
-  if (!upload(uploadUrl, toCopyFile, errors)) {
+  if (!upload(uploadUrl, toCopyFile)) {
     console.log("failed to upload: ".concat(uploadUrl, "  ").concat(toCopyFile));
     sketch__WEBPACK_IMPORTED_MODULE_0___default.a.UI.alert("Upload to S3 failed 😔😔😔", JSON.stringify(errors));
     return false;
@@ -3964,6 +3963,14 @@ function upload(url, filePath) {
   }
 
   return false;
+}
+
+function uuidv4() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    var r = Math.random() * 16 | 0,
+        v = c == 'x' ? r : r & 0x3 | 0x8;
+    return v.toString(16);
+  });
 }
 
 /***/ }),
@@ -4656,8 +4663,8 @@ function runOnBackground(runCommand, title, description, actionName) {
       lbl.setString(output);
     },
     4: function _() {
-      timer.invalidate(); //progress.stopAnimation(null);
-
+      timer.invalidate();
+      progress.stopAnimation(null);
       lbl.setString(output);
     }
   };
@@ -4678,7 +4685,7 @@ function runOnBackground(runCommand, title, description, actionName) {
     var result = dialog.run();
 
     if (!result) {
-      // dialog.finish()
+      dialog.finish();
       return false;
     }
   }

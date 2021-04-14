@@ -1,11 +1,13 @@
 {
-  "$schema": "https://raw.githubusercontent.com/sketch-hq/SketchAPI/develop/docs/sketch-plugin-manifest-schema.json",
-  "icon": "gx.png",
+  "compatibleVersion": 3,
+  "bundleVersion": 1,
+  "name": "Sketch Plugin Template",
+  "title": "GxDesignOps",
   "commands": [
     {
       "name": "Build and Deploy Prototype",
-      "identifier": "gxdesignops.deploy-to-cloud-identifier",
-      "script": "__deploy-to-cloud.js"
+      "identifier": "sketch-plugin-template.deploy-to-cloud-identifier",
+      "script": "__deploy-to-cloud_ts"
     },
     {
       "name": "Send Sketch and Images ",
@@ -25,7 +27,7 @@
     {
       "name": "Check for Result Page",
       "identifier": "gxdesignops.see-result",
-      "script": "__see-result.js"
+      "script": "__see-result_ts"
     },
     {
       "name": "Configuration",
@@ -34,20 +36,14 @@
     }
   ],
   "menu": {
-    "title": "GxDesignOps",
+    "title": "Sketch Plugin Template",
     "items": [
-      "gxdesignops.deploy-to-cloud-identifier",
       "-",
-      "gxdesignops.send-to-queue-identifier-gx",
-      "gxdesignops.file-send-to-queue-identifier",
-      "-",
-      "gxdesignops.see-result",
-      "gxdesignops.set-queue-path"
+      "sketch-plugin-template.system-info"
     ]
   },
   "version": "2.4.1",
   "description": "Sketch Plugin For GeneXus Design Ops Cycles",
-  "name": "GeneXus DesignOps",
   "identifier": "GeneXus DesignOps",
   "disableCocoaScriptPreprocessor": true,
   "appcast": "https://raw.githubusercontent.com/genexuslabs/sketchdesignops/master/.appcast.xml",
