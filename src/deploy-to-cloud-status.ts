@@ -1,9 +1,8 @@
 import sketch from 'sketch';
-import { openUrl, output, showOperationMessage, syncFetch, attachToConsole, startOperationContext, step, info } from './utils';
+import { openUrl, output, showOperationMessage, syncFetch, attachToConsole, startOperationContext, step, info, getFileAndQueueName, getQueuePath } from './utils';
 import { execSync } from '@skpm/child_process';
-import Settings from 'sketch/settings';
-import { SettingKeys } from './constants';
 import { runOnBackgroundAsync } from './utils-new';
+import { getSettingsData, setCurrentProject } from './settings-helper';
 
 
 async function runCommand() {
@@ -27,21 +26,20 @@ export default async function () {
 export async function status() {
   startOperationContext("Checking status", 10);
 
+  let fileName;
+  ({ fileName } = getFileAndQueueName(sketch.getSelectedDocument(), getQueuePath()));
+  
   step("Reading Settings");
-
-  const projectId = Settings.settingForKey(SettingKeys.PROJECT_ID);
-
-  const serverUrl = Settings.settingForKey(SettingKeys.SERVER_URL);
-
-  const statusUrl = serverUrl + 'status?id=' + projectId;
-
-
+  
+  setCurrentProject(fileName);
+  const settings = getSettingsData();
+  const statusUrl = settings.serverUrl + 'status?id=' + settings.projectId;
   step("Checking Job Status");
 
   let isReady = false;
   let deployUrl;
   let pendingRetryCount = 3;
-  let message = '';
+  let message = 'Unknown error';
   let failed = false;
   let waitingRetries = 0;
   let buildingRetries = 0;

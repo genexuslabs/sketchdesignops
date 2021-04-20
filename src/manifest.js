@@ -2,20 +2,16 @@ const { identifier, name } = require('./identifier');
 
 const commandList = [
   {
-    name: 'Build and Deploy Prototype',
+    name: 'Build & Deploy Prototype',
     identifier: `${identifier}.deploy-to-cloud-identifier`,
     script: './deploy-to-cloud.ts'
   },
   {
-    name: 'Status',
+    name: 'Check Last Status',
     identifier: `${identifier}.deploy-to-cloud-status-identifier`,
     script: './deploy-to-cloud-status.ts'
   },
-  {
-    name: "Send Sketch and Images ",
-    identifier: `${identifier}.send-to-queue-identifier`,
-    script: "./send-to-queue.js"
-  },
+
   {
     name: "Send GeneXus Format",
     identifier: `${identifier}.send-to-queue-identifier-gx`,
@@ -43,7 +39,7 @@ module.exports = {
   compatibleVersion: 3,
   bundleVersion: 1,
   name,
-  title: "GxDesignOps",
+  title: "GeneXus Design Ops",
   commands: commandList,
   menu: {
     title: name,
@@ -51,7 +47,7 @@ module.exports = {
       `${identifier}.deploy-to-cloud-identifier`,
       `${identifier}.deploy-to-cloud-status-identifier`,
       '-',
-      `${identifier}.send-to-queue-identifier`,
+      //`${identifier}.send-to-queue-identifier`,
       `${identifier}.send-to-queue-identifier-gx`,
       `${identifier}.file-send-to-queue-identifier`,
       `${identifier}.see-result`,

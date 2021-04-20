@@ -8,7 +8,7 @@ export default function (context) {
   
   // Read settings
   const projectId = Settings.settingForKey(SettingKeys.PROJECT_ID) || uuidv4();
-  const projectName = Settings.settingForKey(SettingKeys.PROJECT_NAME) || '';
+  //const projectName = Settings.settingForKey(SettingKeys.PROJECT_NAME) || '';
   const projectUserName = Settings.settingForKey(SettingKeys.PROJECT_USER_NAME) || '';
   let serverUrl = Settings.settingForKey(SettingKeys.SERVER_URL) || 'https://maed962my9.execute-api.us-east-1.amazonaws.com/prod/';
 
@@ -51,8 +51,8 @@ export default function (context) {
   dialog.addDivider();
   dialog.addLeftLabel("", "Project Id");
   const textProjectId = dialog.addTextInput("projectId", "", projectId);
-  dialog.addLeftLabel("", "Project Name");
-  const textProjectName = dialog.addTextInput("projectName", "", projectName, "Project Name");
+  //dialog.addLeftLabel("", "Project Name");
+  //const textProjectName = dialog.addTextInput("projectName", "", projectName, "Project Name");
   dialog.addLeftLabel("", "User Name");
   const textProjectUserName = dialog.addTextInput("projectUserName", "", projectUserName, "GeneXus User Account Name");
   dialog.addLeftLabel("", "Server Url");
@@ -63,8 +63,8 @@ export default function (context) {
   textServerUrl.setEnabled(true);
   textProjectId.setEnabled(true);
   textProjectId.setEditable(false);
-  textProjectName.setEnabled(true);
-  textProjectName.setEnabled(true);
+  //textProjectName.setEnabled(true);
+  //textProjectName.setEnabled(true);
   textProjectUserName.setEditable(true);
   textProjectUserName.setEnabled(true);
 
@@ -117,7 +117,7 @@ export default function (context) {
 
     Settings.setSettingForKey(SettingKeys.SERVER_URL, serverUrl);
     Settings.setSettingForKey(SettingKeys.PROJECT_ID, projectId);
-    Settings.setSettingForKey(SettingKeys.PROJECT_NAME, projectNameUserValue);
+    //Settings.setSettingForKey(SettingKeys.PROJECT_NAME, projectNameUserValue);
     Settings.setSettingForKey(SettingKeys.PROJECT_USER_NAME, projectUserNameUserValue);
 
     Settings.setSettingForKey("DesignOpsQueue", queueDesign);

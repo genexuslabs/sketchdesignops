@@ -6,7 +6,7 @@ import { attachToConsole, Delegate, setDialogFeedback} from './utils';
 export async function runOnBackgroundAsync(runCommand, title, description, actionName) {
     UIDialog.setUp(context);
  
-    const dialog = new UIDialog(title, NSMakeRect(0, 0, 400, 180), actionName, description, "Close")
+    const dialog = new UIDialog(title, NSMakeRect(0, 0, 400, 220), actionName, description, "Close")
     var step = 0;
     var progress = dialog.addProgress(true, 0, 10);
     // @ts-ignore: Types sketch error
@@ -17,8 +17,6 @@ export async function runOnBackgroundAsync(runCommand, title, description, actio
         {
             'next:': async function next() {
                 if (!(step in steps)) {
-                    // @ts-ignore: Types sketch error
-                    //lbl.setString(userOutput);
                     return;
                 }
                 step++;
@@ -34,25 +32,17 @@ export async function runOnBackgroundAsync(runCommand, title, description, actio
             progress.setHidden(false);
             // @ts-ignore: Types sketch error
             progress.startAnimation(true);
-            // @ts-ignore: Types sketch error
-            //lbl.setString(userOutput);
         },
         2: async function () {
-            // @ts-ignore: Types sketch error
-           // lbl.setString(userOutput);
         },
         3: async function () {
             console.log('running command..');
             await runCommand();
-            // @ts-ignore: Types sketch error
-            //lbl.setString(userOutput);
         },
         4: async function () {
             timer.invalidate();
-            // @ts-ignore: Types sketch error
-            progress.stopAnimation(true);
             // @ts-ignore: Unreachable code error
-            //lbl.setString(userOutput);
+            progress.stopAnimation(true);
         }
     };
     var onExport = function onExport() {
@@ -75,3 +65,16 @@ export async function runOnBackgroundAsync(runCommand, title, description, actio
         }
     }
 }
+
+export function normalize(name: string){
+    return name.replace(' ', '').replace('.', '-');
+
+}
+
+
+export function uuidv4() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }

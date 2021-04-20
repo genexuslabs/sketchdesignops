@@ -6,8 +6,8 @@ export default function () {
   var queuePath = getQueuePath();
   var fileName;
 
-  let doc = window["doc"] || global["doc"];
-
+  const doc = sketch.getSelectedDocument();
+  
   ({ fileName, queuePath } = getFileAndQueueName(doc, queuePath));
 
   const urlPath = queuePath + fileName.replace(".sketch", ".url");
