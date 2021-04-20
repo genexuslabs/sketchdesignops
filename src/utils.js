@@ -4,6 +4,7 @@ import { spawnSync, execSync } from '@skpm/child_process';
 import { UIDialog } from './uidialog';
 import { SettingKeys } from './constants';
 
+
 export function getJsonDocument(doc) {
   var filePath = decodeURIComponent(doc.path);
   var fileName = decodeURIComponent(doc.path).replace(/^.*[\\\/]/, '').trim();
@@ -23,6 +24,7 @@ export function getJsonDocument(doc) {
 }
 
 export var output = "";
+export var userOutput = "";
 export var currentGroup = "";
 
 export var feedbackContext = {
@@ -39,48 +41,64 @@ export function startOperationContext(actionName, totalSteps) {
   feedbackContext.currentStepName = "";
 }
 
+export function openUrl(url) {
+  NSWorkspace.sharedWorkspace().openURL(NSURL.URLWithString(url));
+
+}
 export function step(stepName) {
   feedbackContext.currentStep += 1;
   feedbackContext.currentStepName = stepName;
-  console.log("STEP: " + stepName);
+  info("STEP: " + stepName);
 }
 
+export function info(message){
+  userOutput += message + '\r\n';
+  if (dialogLabel) {
+    dialogLabel.setString(userOutput);
+  }
+}
+
+let dialogLabel;
+
+export function setDialogFeedback(lbl) {
+  dialogLabel = lbl;
+}
 
 export function runOnBackground(runCommand, title, description, actionName) {
   UIDialog.setUp(context);
   const dialog = new UIDialog(title, NSMakeRect(0, 0, 400, 180), actionName, description, "Close")
   var step = 1;
   var prc = new Delegate(
-      { 'next:': function next() {
-            if (!(step in steps))
-            {
-               lbl.setString(output);
-               return;
-            }  
-            steps[step]();
-            step++;
+    {
+      'next:': function next() {
+        if (!(step in steps)) {
+          dialogLabel.setString(output);
+          return;
+        }
+        steps[step]();
+        step++;
       }
-      }
+    }
   );
-  var timer ;
+  var timer;
   var steps = {
-      1 : function() {
-        progress.setHidden(false);
-        progress.startAnimation(nil);
-        lbl.setString(output);
-      },
-      2 : function() {
-        lbl.setString(output);
-      },
-      3 : function() {
-        runCommand();
-        lbl.setString(output);
-     },
-      4 : function() {
-        timer.invalidate();
-        progress.stopAnimation(null);
-        lbl.setString(output);
-      }
+    1: function () {
+      progress.setHidden(false);
+      progress.startAnimation(nil);
+      dialogLabel.setString(output);
+    },
+    2: function () {
+      dialogLabel.setString(output);
+    },
+    3: function () {
+      runCommand();
+      dialogLabel.setString(output);
+    },
+    4: function () {
+      timer.invalidate();
+      progress.stopAnimation(null);
+      dialogLabel.setString(output);
+    }
   };
   var onExport = function onExport(sender) {
     step = 1;
@@ -91,8 +109,8 @@ export function runOnBackground(runCommand, title, description, actionName) {
   dialog.setAction(onExport);
   var progress = dialog.addProgress(true, 0, 10);
   progress.setHidden(true);
-  var lbl = dialog.addFullLabel("out", "", 100);
- // Run event loop
+  dialogLabel = dialog.addFullLabel("out", "", 100);
+  // Run event loop
   while (true) {
     const result = dialog.run()
     if (!result) {
@@ -106,11 +124,11 @@ export function runOnBackground(runCommand, title, description, actionName) {
 var attached = false;
 
 export function attachToConsole() {
-  if (attached)
-  {
+  if (attached) {
     output = "";
+    userOutput = '';
     return;
-  } 
+  }
   attached = true;
   console.log_base = console.log;
   console.group_base = console.group;
@@ -154,7 +172,7 @@ export function Delegate(selectors) {
 export function showOperationMessage(title, message, error) {
   var alert = NSAlert.alloc().init();
 
-  alert.accessoryView = NSView.alloc().initWithFrame(NSMakeRect(0, 0, 700, 400));
+  alert.accessoryView = NSView.alloc().initWithFrame(NSMakeRect(0, 0, 600, 400));
   if (error)
     alert.setAlertStyle(2);
   else
@@ -217,6 +235,33 @@ export function getFileAndQueueName(doc, queuePath) {
   return { fileName, queuePath };
 }
 
+export function syncFetch(url, method, body, contentType) {
+  var curl_command = `curl -X ${method} -H "Content-Type: ${contentType}" -d '${body}' ${url}`
+
+  curl_command = curl_command;
+  log("syncFetch: " + curl_command);
+  var out = execSync(curl_command);
+  if (out && out.length > 0) {
+    //console.log("syncFetch output:" + out.toString());
+    return out.toString();
+  }
+  throw new Error('curl unknown error');
+}
+
+export function syncS3PUT(url, filePath, contentType) {
+  var curl_command = `curl -X PUT -T "${filePath}" -H "Content-Type: ${contentType}" -L "${url}"`;
+  curl_command = curl_command;
+  //
+  var out = execSync(curl_command);
+  // When success the length is nothing, when fail AWS is sending an XML format, so parse it.
+  if (out && out.length > 0) {
+    log("synncS3PUT: " + curl_command);
+    console.log("syncFetch output:" + out.toString());
+    throw new Error('curl unknown error');
+  }
+  console.log("S3 upload OK");
+}
+
 export function uploadToS3(fileName, file, bucketName, s3Secret, s3AccessKey, errors) {
   // Bucket Names with special characters are not allowed by AWS S3 so ensure a valid name
   fileName = fileName.replace(/[^a-z0-9.]/gi, '_');
@@ -231,7 +276,7 @@ export function uploadToS3(fileName, file, bucketName, s3Secret, s3AccessKey, er
   var signatureObj = execSync(signMethod);
   if (signatureObj) {
     var signature = signatureObj.toString().replace(/\r?\n|\r/, "");
-    console.log("Signature: " + signature.toString());
+    //console.log("Signature: " + signature.toString());
     // Now we can try uploading by using the given signature
     var curl_command = `curl -X PUT -T "${file}" -H "Host: ${bucketName}.s3.amazonaws.com" -H "Date: ${dateValue}" -H "Content-Type: ${contentType}" -H "Authorization: AWS ${s3AccessKey}:${signature}" https://${bucketName}.s3.amazonaws.com/${fileName}`;
     console.log(curl_command);
@@ -412,7 +457,7 @@ function getFiles(path) {
       return ret.toString().split('\n')
     }
   }
-  catch{ }
+  catch { }
   return [];
 }
 

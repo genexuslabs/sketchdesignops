@@ -8,18 +8,19 @@ import {  SettingKeys} from './constants';
 
 export default function() {
   sketch.UI.alert("Copied to Design Ops Queue ! 💚");
-  const doc = sketch.getSelectedDocument()
+  const doc = sketch.getSelectedDocument();
   var queuePath = getQueuePath();
-  if (queuePath)
+  if (queuePath) {
     if (!copySketch(queuePath, doc, true))
       showOperationMessage("😔 Some error occurs, see console for further details", output);
-
+  }
 }
 
 
 export function copySketch(queuePath, doc, images) {
   var fileName;
   var path = queuePath;
+  console.log("Starting copySketch " + queuePath);
   ({ fileName, queuePath } = getFileAndQueueName(doc, path));
   console.log("copy to queue:" + queuePath);
   if (queuePath.localeCompare(path) != 0) {
