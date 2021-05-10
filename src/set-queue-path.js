@@ -81,7 +81,7 @@ export default function (context) {
   textS3Bucket.setEditable(enableS3);
   textS3Bucket.setEnabled(enableS3);
   dialog.addLeftLabel("", "S3 Access Key")
-  var textS3AccessKey = dialog.addTextInput("s3AccessKey", "", s3AccessKey, "Enter access Key")
+  var textS3AccessKey = dialog.addTextInput("s3AccessKey", "", s3AccessKey, "Enter access Key.")
   textS3AccessKey.setEditable(enableS3)
   textS3AccessKey.setEnabled(enableS3)
   dialog.addLeftLabel("", "S3 Secret Key")
@@ -102,25 +102,27 @@ export default function (context) {
       dialog.finish()
       return false
     }
+    console.log("Saving User Preferences");
     var enableS3Num = dialog.views['enableS3'].state()
     var enablePreviewNum = dialog.views['enablePreview'].state()
     var enableFontsNum = dialog.views['enableFonts'].state()
-    queueDesign = dialog.views['queueDesign'].stringValue() + ""
+    queueDesign = txtQueueDesign.stringValue();
     s3SecretKey = dialog.views['s3SecretKey'].stringValue() + ""
     s3AccessKey = dialog.views['s3AccessKey'].stringValue() + ""
     s3Bucket = dialog.views['s3Bucket'].stringValue() + ""
 
-    const projectNameUserValue = dialog.views['projectName'].stringValue();
+    //const projectNameUserValue = dialog.views['projectName'].stringValue();
     const projectUserNameUserValue = dialog.views['projectUserName'].stringValue();
 
     serverUrl = textServerUrl.stringValue();
 
+    console.log('SettingKeys.DESIGN_QUEUE: ' + queueDesign);
     Settings.setSettingForKey(SettingKeys.SERVER_URL, serverUrl);
     Settings.setSettingForKey(SettingKeys.PROJECT_ID, projectId);
     //Settings.setSettingForKey(SettingKeys.PROJECT_NAME, projectNameUserValue);
     Settings.setSettingForKey(SettingKeys.PROJECT_USER_NAME, projectUserNameUserValue);
 
-    Settings.setSettingForKey("DesignOpsQueue", queueDesign);
+    Settings.setSettingForKey(SettingKeys.DESIGN_QUEUE, queueDesign);
     Settings.setSettingForKey("gxS3Enabled", enableS3Num);
     Settings.setSettingForKey("enablePreview", enablePreviewNum);
     Settings.setSettingForKey("enableFonts", enableFontsNum);
