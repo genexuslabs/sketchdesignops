@@ -43,7 +43,7 @@ export async function status() {
   let failed = false;
   let waitingRetries = 0;
   let buildingRetries = 0;
-  let buildingRetryCount = 5;
+  let buildingRetryCount = 12;
   const sleepSeconds = 5;
   while (!isReady && pendingRetryCount > 0 && !failed && buildingRetryCount > 0) {
 
@@ -66,13 +66,13 @@ export async function status() {
           waitingRetries++;
           let waitingSeconds = waitingRetries * sleepSeconds;
           sketch.UI.message(`Waiting for Build server to build project (elapsed time: ${waitingSeconds}s)`);
-          info('Current Job Status: Waiting for Build');
+          info('Status: Waiting for Build');
           message = 'Build server may be offline, check with admininstrator';
 
           break;
         case 'BUILDING':
           waitingSeconds = buildingRetries * sleepSeconds;
-          info(`Current Job Status: Build Server is building Sketch Project (elapsed time: ${waitingSeconds}s)`);
+          info(`Status: Build Server is building Sketch Project (elapsed time: ${waitingSeconds}s)`);
           sketch.UI.message(`Build Server is building Sketch Project (elapsed time: ${waitingSeconds}s)`);
           message = 'Build server is building, wait some minutes';
           buildingRetries++;
@@ -97,7 +97,7 @@ export async function status() {
 
   }
   if (isReady) {
-    sketch.UI.alert("GeneXus", "Your prototype is ready! 💚");
+    sketch.UI.alert("GeneXus", "Your prototype is ready! 💚. Your default browser will be launched now");
     openUrl(deployUrl);
     return true;
   }

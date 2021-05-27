@@ -48,7 +48,7 @@ export function openUrl(url) {
 export function step(stepName) {
   feedbackContext.currentStep += 1;
   feedbackContext.currentStepName = stepName;
-  info("STEP: " + stepName);
+  info(stepName);
 }
 
 export function info(message){
@@ -232,6 +232,7 @@ export function getFileAndQueueName(doc, queuePath) {
       fileName = withoutVersionPath;
     }
   }
+  fileName = fileName.replace(/\s|[<>:;!#$%^&*]/g, ''); //Santize Name
   return { fileName, queuePath };
 }
 
