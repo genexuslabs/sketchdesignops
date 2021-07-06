@@ -3,7 +3,9 @@ A plugin for sketch in order to simplify exchange of assets and design between d
 
 # How to install
 
-Download the latest Release and double click the .sketchplugin
+Download the latest Release and double click the .sketchplugin 
+
+<ins>Note:</ins> You need to have Sketch installed for the .sketchplugin extension to be recognized by MacOS, otherwise a folder will be unzipped after downloading the latest Release.
 
 # How to use it
 
