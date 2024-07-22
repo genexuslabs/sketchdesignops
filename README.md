@@ -1,6 +1,8 @@
 # sketchdesignops
 A plugin for sketch in order to simplify exchange of assets and design between designers and developers
 
+### This repository has been archived as its not published anymore. (22 July 2024)
+
 # How to install
 
 Download the latest Release and double click the .sketchplugin 
